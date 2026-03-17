@@ -24,11 +24,19 @@ This is the most common thing users want to do. Three steps, no jargon:
   - "I need an image" → if you have image generation capabilities (DALL-E, Nano Banana, etc.), generate one from their description, show them the result, and iterate until they are happy. The generated URL works directly — Bags pins it to IPFS on upload. If you cannot generate images, suggest free hosts: imgur.com, postimages.org, or catbox.moe.
   Do NOT move past the image step until the user is satisfied with what they see.
 
-2. SET UP — Once they confirm, create token metadata and fee config behind the scenes. Return the fee config transactions and tell the user: "Sign these to set up your fee split." Wait for them to confirm they have signed.
+2. SET UP — Once they confirm, create token metadata and fee config behind the scenes. Then open a signing page so the user can sign with their wallet:
+  - Call bags_open_signing_page with the fee config transactions. This starts a local page where the user connects their wallet (Phantom, Solflare, etc.) and signs with one click — no copy-pasting.
+  - Give the user the signing link and tell them: "Click this link to sign your fee setup."
+  - Wait for them to confirm they have signed before continuing.
 
-3. LAUNCH — After the fee config is signed, build the launch transaction. Return it and tell the user: "Sign this last one and your coin is live." Include the initial buy amount so they know what they are spending.
+3. LAUNCH — After the fee config is signed, build the launch transaction. Open another signing page for the launch transaction. Tell the user: "Click this link to launch your coin." Include the initial buy amount so they know what they are spending.
 
-That is it. Confirm → sign fee setup → sign launch → coin is live.
+That is it. Confirm → click to sign fee setup → click to launch → coin is live.
+
+## Signing Transactions
+
+NEVER dump raw transaction bytes to the user. Always use bags_open_signing_page to create a signing link.
+The signing page auto-detects installed wallets (Phantom, Solflare, Backpack, etc.), handles connection, and broadcasts the signed transaction — zero friction for the user.
 
 ## Other Things Users Can Do
 

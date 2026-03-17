@@ -1,6 +1,6 @@
 # bags-sdk-mcp
 
-Connect Bags.fm to any MCP-compatible AI agent. Launch, manage, and monitor your coins from your terminal.
+Connect Bags.fm to any MCP-compatible AI agent. Launch coins, browse trends, trade, and manage fees from your terminal or any AI client.
 
 [![npm](https://img.shields.io/npm/v/bags-sdk-mcp)](https://www.npmjs.com/package/bags-sdk-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -54,62 +54,43 @@ bags-sdk-mcp --http --port=8080      # custom port
 
 ---
 
-## Launch a coin (step by step)
+## Launch a coin
 
-Launching costs real SOL. The server returns unsigned transactions at every step so you review and sign each one before anything hits the chain.
+Launching costs real SOL. You confirm everything before a single transaction hits the chain.
 
-### Step 1 — Upload metadata
+### How it works
 
-Tell your agent the token name, symbol, description, and image URL.
+1. **Tell your agent what you want.** Name, symbol, description, image, wallet, fee split, initial buy amount.
+2. **Review the summary.** The agent shows you everything and asks for confirmation before calling any tools.
+3. **Sign the fee setup.** The agent opens a local signing page — click "Connect Wallet", your wallet pops up, approve. No copy-pasting raw transactions.
+4. **Sign the launch.** Same flow. One more signature and your coin is live.
 
-```
-"Create token info for a coin called BAGS SDK, symbol BSDK,
- description 'The official Bags SDK hackathon coin',
- image https://i.imgur.com/3fZ6VWG.png"
-```
+That's it. Confirm, sign, sign, live.
 
-Tool called: `bags_create_token_info` — uploads metadata to IPFS, returns a `tokenMint` and `uri`.
+### Wallet signing
 
-### Step 2 — Set up fee sharing
+The server includes a built-in signing page that runs on localhost. When it's time to sign, you get a link. Click it, connect your wallet (Phantom, Solflare, Backpack, Coinbase — whatever you have installed), and approve. The page handles everything: deserialization, signing, broadcasting, and confirmation.
 
-Decide who earns trading fees and in what split. BPS must add up to 10000 (100%).
+No raw transactions. No clipboard. No jargon.
 
-```
-"Create a fee config: 100% to my wallet 83xQ...biH"
-```
+---
 
-Tool called: `bags_create_fee_config` — returns unsigned transaction(s) and a `meteoraConfigKey`.
+## Browse what's trending
 
-**Sign and send the fee config transaction(s) first.**
+Not just a launch tool — you can explore the Bags.fm ecosystem:
 
-### Step 3 — Build the launch transaction
+- **Recent launches** — see what just went live
+- **Top tokens** — leaderboard by volume or fees earned
+- **Wallet portfolio** — check any wallet's holdings and claimable fees
+- **Token details** — pool data, creator info, fee configs for any token
 
-```
-"Build the launch transaction with 0.1 SOL initial buy"
-```
-
-Tool called: `bags_create_launch_tx` — returns one more unsigned transaction.
-
-**Sign and send. Your coin is live.**
-
-### One-shot alternative
-
-If you want all three steps composed into a single call:
-
-```
-"Launch a token called BAGS SDK, symbol BSDK, 100% fees to my wallet,
- 0.1 SOL initial buy"
-```
-
-Tool called: `bags_launch_token` — returns all unsigned transactions in signing order.
-
-You still sign each one individually.
+Just ask your agent: "What's trending on Bags?" or "Show me the top tokens this week."
 
 ---
 
 ## What's in the box
 
-### 40 tools
+### 41 tools
 
 | Domain | Tools | What they do |
 |--------|-------|-------------|
@@ -123,6 +104,7 @@ You still sign each one individually.
 | **State** | `pools`, `pool`, `pool_config_keys` | Liquidity pool data |
 | **Analytics** | `token_creators`, `lifetime_fees`, `claim_stats`, `top_tokens` | On-chain analytics |
 | **Solana** | `send_transaction`, `wallet_balance`, `token_holdings` | RPC utilities |
+| **Signing** | `open_signing_page` | Local wallet-connect signing page |
 
 All tool names are prefixed with `bags_`.
 
@@ -200,7 +182,7 @@ The server loads `.env` from your working directory automatically.
 
 ## Security
 
-No private keys pass through this server. Every transaction-generating tool returns unsigned base64. You sign with your own wallet (Phantom, Solflare, Backpack) and broadcast with `bags_send_transaction`.
+No private keys pass through this server. Every transaction-generating tool returns unsigned data. The built-in signing page connects directly to your browser wallet — keys never leave your device.
 
 ---
 

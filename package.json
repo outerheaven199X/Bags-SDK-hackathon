@@ -13,7 +13,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const{cpSync,mkdirSync}=require('fs');mkdirSync('dist/signing',{recursive:true});cpSync('src/signing/page.html','dist/signing/page.html')\"",
     "dev": "tsc --watch",
     "start": "node dist/bin/bags-sdk-mcp.js",
     "start:http": "node dist/bin/bags-sdk-mcp.js --http",
