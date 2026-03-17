@@ -1,4 +1,4 @@
-/** Central tool registry — registers all 40 tools on a single McpServer instance. */
+/** Central tool registry — registers all MCP tools on a single McpServer instance. */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
@@ -52,8 +52,10 @@ import { registerSendTransaction } from "./solana/send-tx.js";
 import { registerWalletBalance } from "./solana/balance.js";
 import { registerTokenHoldings } from "./solana/holdings.js";
 
+import { registerToolCatalog } from "./meta/catalog.js";
+
 /**
- * Register all 40 MCP tools on the given server.
+ * Register all MCP tools on the given server.
  * @param server - The McpServer instance to register tools on.
  */
 export function registerAllTools(server: McpServer) {
@@ -106,4 +108,6 @@ export function registerAllTools(server: McpServer) {
   registerSendTransaction(server);
   registerWalletBalance(server);
   registerTokenHoldings(server);
+
+  registerToolCatalog(server);
 }
