@@ -55,7 +55,7 @@
     }
 
     .container {
-      max-width: 440px;
+      max-width: 500px;
       width: 100%;
       padding: 1.5rem;
     }
@@ -66,19 +66,19 @@
     }
 
     .logo h1 {
-      font-size: 1.35rem;
+      font-size: 2.2rem;
       font-weight: 700;
       color: var(--text);
     }
 
     .logo .sub {
       display: block;
-      font-size: 0.65rem;
+      font-size: 0.8rem;
       font-weight: 500;
       color: var(--text-light);
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      margin-top: 0.25rem;
+      margin-top: 0.35rem;
     }
 
     .logo .bags {
@@ -101,7 +101,7 @@
     }
 
     .card h2 {
-      font-size: 0.75rem;
+      font-size: 0.9rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
@@ -118,8 +118,8 @@
     }
 
     .meta-row:last-child { border-bottom: none; }
-    .meta-label { color: var(--text-muted); font-size: 0.9rem; }
-    .meta-value { color: var(--text); font-weight: 600; font-size: 0.9rem; }
+    .meta-label { color: var(--text-muted); font-size: 1.05rem; }
+    .meta-value { color: var(--text); font-weight: 600; font-size: 1.05rem; }
 
     .wallets {
       display: flex;
@@ -137,7 +137,7 @@
       border-radius: var(--radius-sm);
       color: var(--text);
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 1.1rem;
       font-weight: 600;
       cursor: pointer;
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -167,7 +167,7 @@
       border-radius: var(--radius-pill);
       color: var(--accent-text);
       font-family: inherit;
-      font-size: 1.05rem;
+      font-size: 1.2rem;
       font-weight: 700;
       cursor: pointer;
       transition: background 0.15s, transform 0.1s;
@@ -183,7 +183,7 @@
       padding: 0.85rem 1rem;
       border-radius: var(--radius-sm);
       margin-top: 0.75rem;
-      font-size: 0.85rem;
+      font-size: 1rem;
       font-weight: 500;
     }
 
@@ -223,7 +223,7 @@
       text-align: center;
       color: var(--text-muted);
       padding: 1rem;
-      font-size: 0.9rem;
+      font-size: 1.05rem;
       line-height: 1.6;
     }
 
@@ -238,14 +238,18 @@
     .powered-by {
       text-align: center;
       margin-top: 1.25rem;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       color: var(--text-light);
     }
 
     .powered-by a {
-      color: var(--accent);
+      color: var(--text-muted);
       text-decoration: none;
       font-weight: 600;
+    }
+
+    .powered-by a:hover {
+      color: var(--accent);
     }
   </style>
 </head>
@@ -276,7 +280,7 @@
     <!-- Step 2: Sign transactions -->
     <div class="card hidden" id="sign-card">
       <h2 id="sign-heading">Sign & Send</h2>
-      <p id="sign-description" style="color:var(--text-muted); margin-bottom:0.75rem; font-size:0.85rem;"></p>
+      <p id="sign-description" style="color:var(--text-muted); margin-bottom:0.75rem; font-size:1rem;"></p>
       <button class="sign-btn" id="sign-btn">Sign & Send</button>
       <div class="progress-bar hidden" id="progress-bar">
         <div class="progress-fill" id="progress-fill" style="width:0%"></div>
@@ -287,7 +291,7 @@
     <div id="status-area"></div>
 
     <div class="powered-by">
-      Bags.fm SDK &middot; <a href="https://bags.fm" target="_blank">bags.fm</a>
+      Need help? <a href="https://outerheaven199X.github.io/bags-sdk-mcp/" target="_blank">View docs</a>
     </div>
   </div>
 

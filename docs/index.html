@@ -178,6 +178,7 @@ tr:hover td{background:#f9fafb}
     <div class="nav-group-title">Advanced</div>
     <a class="nav-link" href="#" data-section="fee-composer">Fee Config Composer</a>
     <a class="nav-link" href="#" data-section="agent-mode">Agent Mode</a>
+    <a class="nav-link" href="#" data-section="signing-page">Signing Page</a>
     <a class="nav-link" href="#" data-section="http-transport">HTTP Transport</a>
     <a class="nav-link" href="#" data-section="cli-reference">CLI Reference</a>
   </div>
@@ -1103,6 +1104,64 @@ npm run build</code></pre>
     <li><strong>portfolio-rebalance</strong> — sends position summary to Sonnet for rebalancing suggestions</li>
     <li><strong>fee-optimizer</strong> — sends fee configs to Sonnet for optimization suggestions</li>
   </ul>
+</div>
+
+<!-- ════════════════════════════════════ SIGNING PAGE ════════════════════════════════════ -->
+<div class="section" id="signing-page">
+  <h2>Signing Page</h2>
+  <p>The SDK includes a built-in local signing page so users never need to copy-paste raw transaction data. When a transaction needs signing, the agent opens a localhost page where users connect their wallet and approve with one click.</p>
+
+  <h3>How it works</h3>
+  <ol>
+    <li>The agent calls <code>bags_open_signing_page</code> with unsigned transactions and token metadata.</li>
+    <li>A local server starts on <code>localhost:3141</code> (bound to 127.0.0.1 only) and returns a signing URL.</li>
+    <li>The agent gives the user the link. They click it, and the signing page opens in their browser.</li>
+    <li>The page auto-detects installed Solana wallets (Phantom, Solflare, Backpack, Coinbase).</li>
+    <li>User clicks their wallet, approves the transaction in the wallet popup, and the page broadcasts it to the network.</li>
+    <li>Confirmation and Solscan links appear on the page.</li>
+  </ol>
+
+  <h3>Security</h3>
+  <ul>
+    <li><strong>Localhost only.</strong> The signing server binds to <code>127.0.0.1</code> and is not accessible from the network.</li>
+    <li><strong>No private keys.</strong> Your wallet extension handles all signing. Keys never leave your device or touch the SDK.</li>
+    <li><strong>Session expiry.</strong> Signing sessions expire after 10 minutes. Stale data is automatically pruned.</li>
+    <li><strong>No storage.</strong> Transactions are held in memory only for the signing session. Nothing is persisted to disk.</li>
+    <li><strong>Direct broadcast.</strong> Signed transactions are sent directly from your browser to the Solana RPC endpoint. The SDK server is not in the broadcast path.</li>
+  </ul>
+
+  <h3>Supported wallets</h3>
+  <table>
+    <thead><tr><th>Wallet</th><th>Detection</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Phantom</td><td><code>window.phantom.solana</code></td><td>Supported</td></tr>
+      <tr><td>Solflare</td><td><code>window.solflare</code></td><td>Supported</td></tr>
+      <tr><td>Backpack</td><td><code>window.backpack</code></td><td>Supported</td></tr>
+      <tr><td>Coinbase Wallet</td><td><code>window.coinbaseSolana</code></td><td>Supported</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Troubleshooting</h3>
+
+  <h4>"No Solana wallets detected"</h4>
+  <p>The page checks for browser-extension wallets. Make sure your wallet extension is installed, enabled, and that you are opening the signing link in the same browser where the extension is active.</p>
+
+  <h4>"Session not found or expired"</h4>
+  <p>Sessions last 10 minutes. If you waited too long, go back to the agent and re-trigger the signing step. The agent will generate a fresh session.</p>
+
+  <h4>Transaction fails after signing</h4>
+  <ul>
+    <li><strong>Insufficient SOL</strong> — make sure your wallet has enough SOL for the transaction fee plus any initial buy amount.</li>
+    <li><strong>Blockhash expired</strong> — the page fetches a fresh blockhash before signing. If your network is slow, try again.</li>
+    <li><strong>RPC issues</strong> — if you are using a custom <code>SOLANA_RPC_URL</code>, verify it is reachable. The default is mainnet-beta.</li>
+  </ul>
+
+  <h4>Page does not load</h4>
+  <p>The signing server runs on port <code>3141</code>. If another process is using that port, the server will fail to start. Check for conflicts with <code>lsof -i :3141</code> (Mac/Linux) or <code>netstat -ano | findstr 3141</code> (Windows).</p>
+
+  <div class="callout callout-tip">
+    <strong>Tip:</strong> The signing page works with both legacy transactions and versioned transactions. It tries legacy first and falls back to versioned automatically.
+  </div>
 </div>
 
 <!-- ════════════════════════════════════ HTTP TRANSPORT ════════════════════════════════════ -->
