@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BagsSDK — Developer Toolkit for Bags.fm</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0d1117;--bg-surface:#010409;--bg-card:#161b22;--bg-hover:#1c2128;--bg-code:#0d1117;
+--border:#21262d;--border-hover:#30363d;
+--text:#e6edf3;--text-secondary:#8b949e;--text-dim:#484f58;
+--green:#3fb950;--green-dim:#1a7f37;
+--purple:#a78bfa;--purple-dim:#6d28d9;
+--blue:#58a6ff;--blue-dim:#1f6feb;
+--amber:#d29922;--amber-dim:#845306;
+--red:#f85149;--red-dim:#a4130f;
+--cyan:#39d353;
+--font:'Inter',system-ui,-apple-system,sans-serif;
+--mono:'Fira Code','Consolas','Monaco',monospace;
+--sidebar-w:240px;--toc-w:200px;
+}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#30363d transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.65;font-size:14.5px;display:flex;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+a{color:var(--green);text-decoration:none}a:hover{color:#56d364}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--bg-surface);border-right:1px solid var(--border);overflow-y:auto;z-index:10;padding:20px 0}
+.sidebar-logo{padding:0 20px 20px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:.5px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.sidebar-logo .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.sidebar h4{padding:8px 20px 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim)}
+.sidebar a{display:block;padding:6px 20px 6px 28px;font-size:13.5px;color:var(--text-secondary);transition:all .15s}
+.sidebar a:hover{color:var(--text);background:var(--bg-hover)}
+.sidebar a.active{color:var(--green);background:rgba(63,185,80,.08);border-left:2px solid var(--green);padding-left:26px}
+
+/* TOC */
+.toc{position:fixed;top:0;right:0;width:var(--toc-w);height:100vh;padding:80px 16px 20px;overflow-y:auto;font-size:12px}
+.toc-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim);margin-bottom:12px}
+.toc a{display:block;padding:4px 0;color:var(--text-dim);transition:color .15s}
+.toc a:hover,.toc a.active{color:var(--green)}
+
+/* MAIN */
+main{margin-left:var(--sidebar-w);margin-right:var(--toc-w);padding:40px 60px 120px;max-width:780px;width:100%}
+main h1{font-size:32px;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
+main h2{font-size:22px;font-weight:600;margin:48px 0 16px;padding-top:24px;border-top:1px solid var(--border);letter-spacing:-.3px}
+main h3{font-size:17px;font-weight:600;margin:32px 0 12px;color:var(--text)}
+main h4{font-size:14px;font-weight:600;margin:20px 0 8px;color:var(--text-secondary)}
+main p{margin-bottom:16px;color:var(--text-secondary)}
+main strong{color:var(--text);font-weight:600}
+main ul,main ol{margin:0 0 16px 24px;color:var(--text-secondary)}
+main li{margin-bottom:6px}
+main li code{font-size:13px}
+
+/* CODE */
+code{font-family:var(--mono);font-size:13px;background:var(--bg-card);padding:2px 6px;border-radius:4px;color:#c9d1d9;border:1px solid var(--border)}
+pre{background:#161b22;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:0 0 20px;overflow-x:auto;line-height:1.5}
+pre code{background:none;padding:0;font-size:13px;color:#c9d1d9;border:none}
+.code-title{font-family:var(--mono);font-size:11px;color:var(--text-secondary);background:#1c2128;border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;padding:8px 16px;margin-top:16px}
+.code-title+pre{border-radius:0 0 8px 8px;margin-top:0}
+
+/* CALLOUTS */
+.callout{border-radius:8px;padding:14px 18px;margin:0 0 20px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.callout-info{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--blue)}
+.callout-warn{background:rgba(210,153,34,.06);border:1px solid rgba(210,153,34,.15);color:var(--amber)}
+.callout-danger{background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.15);color:var(--red)}
+.callout-tip{background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.15);color:var(--green)}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;margin:0 0 20px;font-size:13.5px}
+th{text-align:left;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
+td{padding:10px 14px;border:1px solid var(--border);color:var(--text-secondary)}
+tr:hover td{background:var(--bg-hover)}
+
+/* BADGES */
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;letter-spacing:.3px;font-family:var(--mono)}
+.badge-get{background:rgba(63,185,80,.12);color:var(--green)}
+.badge-post{background:rgba(88,166,255,.12);color:var(--blue)}
+.badge-read{background:rgba(63,185,80,.1);color:var(--green)}
+.badge-write{background:rgba(210,153,34,.1);color:var(--amber)}
+.badge-composed{background:rgba(88,166,255,.1);color:var(--blue)}
+
+/* TOOL CARD */
+.tool{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:0 0 16px}
+.tool-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tool-name{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text)}
+.tool p{margin-bottom:8px;font-size:13.5px}
+
+/* HERO */
+.hero-badge{display:inline-block;font-size:12px;font-weight:500;padding:4px 12px;border-radius:20px;background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.2);color:var(--green);margin-bottom:16px}
+.hero-sub{font-size:18px;color:var(--text-secondary);margin-bottom:32px;max-width:560px;line-height:1.6}
+
+/* FEATURE GRID */
+.features{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 24px}
+.feature{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px}
+.feature-title{font-weight:600;font-size:14px;margin-bottom:4px;color:var(--text)}
+.feature-desc{font-size:13px;color:var(--text-secondary);line-height:1.5}
+
+/* SEARCH */
+.search-bar{padding:0 20px 16px}
+.search-bar input{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:8px 12px 8px 32px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border .15s}
+.search-bar input:focus{border-color:var(--border-hover)}
+.search-bar{position:relative}
+.search-bar::before{content:"⌕";position:absolute;left:30px;top:4px;color:var(--text-dim);font-size:14px}
+
+@media(max-width:1100px){.toc{display:none}main{margin-right:0}}
+@media(max-width:800px){.sidebar{transform:translateX(-100%)}main{margin-left:0;padding:24px 20px 80px}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+<div class="sidebar-logo"><span class="dot"></span> BagsSDK</div>
+<div class="search-bar"><input type="text" placeholder="Search docs..." id="search" oninput="filterNav(this.value)"></div>
+
+<h4>Getting started</h4>
+<a href="#introduction" class="active nav-link">Introduction</a>
+<a href="#what-is-mcp" class="nav-link">What is MCP?</a>
+<a href="#quickstart" class="nav-link">Quickstart (5 min)</a>
+<a href="#configuration" class="nav-link">Configuration</a>
+
+<h4>Core concepts</h4>
+<a href="#tools" class="nav-link">Tools (40)</a>
+<a href="#resources" class="nav-link">Resources (4)</a>
+<a href="#prompts" class="nav-link">Prompts (6)</a>
+<a href="#fee-composer" class="nav-link">Fee Config Composer</a>
+<a href="#caching" class="nav-link">Caching &amp; Rate Limits</a>
+<a href="#zero-custody" class="nav-link">Zero-Custody Design</a>
+
+<h4>Tool reference</h4>
+<a href="#tools-trading" class="nav-link">Trading</a>
+<a href="#tools-launch" class="nav-link">Token Launch</a>
+<a href="#tools-fees" class="nav-link">Fee Sharing</a>
+<a href="#tools-claiming" class="nav-link">Claiming</a>
+<a href="#tools-partner" class="nav-link">Partner</a>
+<a href="#tools-dexscreener" class="nav-link">Dexscreener</a>
+<a href="#tools-agent" class="nav-link">Agent Auth</a>
+<a href="#tools-analytics" class="nav-link">Analytics</a>
+<a href="#tools-state" class="nav-link">State</a>
+<a href="#tools-solana" class="nav-link">Solana</a>
+
+<h4>Guides</h4>
+<a href="#flow-portfolio" class="nav-link">Check Portfolio</a>
+<a href="#flow-claim" class="nav-link">Claim Fees</a>
+<a href="#flow-solo-launch" class="nav-link">Launch Solo Token</a>
+<a href="#flow-team-launch" class="nav-link">Launch Team Token</a>
+<a href="#flow-analyze" class="nav-link">Analyze a Token</a>
+<a href="#flow-partner" class="nav-link">Set Up as Partner</a>
+<a href="#flow-agent-bootstrap" class="nav-link">Agent Bootstrap</a>
+
+<h4>Advanced</h4>
+<a href="#agent-mode" class="nav-link">Agent Mode</a>
+<a href="#transports" class="nav-link">Transports</a>
+<a href="#architecture" class="nav-link">Architecture</a>
+<a href="#contributing" class="nav-link">Contributing</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main>
+
+<!-- INTRODUCTION -->
+<section id="introduction">
+<span class="hero-badge">Built for Bags Hackathon 2026</span>
+<h1>BagsSDK</h1>
+<p class="hero-sub">An MCP server for the Bags.fm API. 40 tools, 4 browsable resources, 6 workflow prompts, a fee-split builder, and an optional autonomous agent. One install.</p>
+
+<div class="features">
+<div class="feature"><div class="feature-title">40 MCP tools</div><div class="feature-desc">Trading, launches, fee sharing, partner keys, Dexscreener, agent auth. If Bags has an endpoint, there's a tool for it.</div></div>
+<div class="feature"><div class="feature-title">4 resources</div><div class="feature-desc">Launch feed, pools, token detail, portfolio. Data your AI can read before it decides what to do.</div></div>
+<div class="feature"><div class="feature-title">6 prompts</div><div class="feature-desc">Multi-step recipes for launching tokens, claiming fees, checking earnings. The AI follows the steps, you sign the transactions.</div></div>
+<div class="feature"><div class="feature-title">Fee config composer</div><div class="feature-desc">100-party fee splits without raw BPS math. Fluent API, validation, presets for common patterns.</div></div>
+<div class="feature"><div class="feature-title">Zero custody</div><div class="feature-desc">No private keys touch this server. Transactions come back unsigned. You sign in your own wallet.</div></div>
+<div class="feature"><div class="feature-title">Agent mode</div><div class="feature-desc">Autonomous loop. Hermes 4 for the routine checks, Sonnet for the judgment calls.</div></div>
+</div>
+
+<div class="code-title">Install &amp; run</div>
+<pre><code>npx bags-sdk-mcp</code></pre>
+</section>
+
+<!-- WHAT IS MCP -->
+<section id="what-is-mcp">
+<h2>What is MCP?</h2>
+<p><strong>Model Context Protocol</strong> is an open standard from Anthropic (also adopted by OpenAI and Google) that lets AI assistants call external APIs. You build one MCP server, and it works with Claude Desktop, Cursor, Windsurf, or anything else that supports the protocol. No custom integrations per client.</p>
+<p>BagsSDK is an MCP server for Bags.fm. Connect it to Claude Desktop and you can type "launch a token called XYZ with a 3-way fee split" in plain English. Claude works out which tools to call and in what order.</p>
+<p>MCP servers expose three things:</p>
+<table>
+<tr><th>Capability</th><th>What it does</th><th>BagsSDK count</th></tr>
+<tr><td><strong>Tools</strong></td><td>Actions: get quotes, build transactions, claim fees, launch tokens</td><td>40</td></tr>
+<tr><td><strong>Resources</strong></td><td>Read-only context the AI checks before deciding what to do</td><td>4</td></tr>
+<tr><td><strong>Prompts</strong></td><td>Pre-written scripts for multi-step jobs like token launches</td><td>6</td></tr>
+</table>
+</section>
+
+<!-- QUICKSTART -->
+<section id="quickstart">
+<h2>Quickstart</h2>
+<p>About 5 minutes. You need a Bags API key and Claude Desktop (or Cursor, or any MCP client).</p>
+
+<h3>1. Get your Bags API key</h3>
+<p>Visit <a href="https://dev.bags.fm">dev.bags.fm</a>, sign in, and create a new API key.</p>
+
+<h3>2. Configure Claude Desktop</h3>
+<p>Open Claude Desktop settings and add this to your MCP server configuration:</p>
+<div class="code-title">claude_desktop_config.json</div>
+<pre><code>{
+  "mcpServers": {
+    "bags-sdk": {
+      "command": "npx",
+      "args": ["-y", "bags-sdk-mcp"],
+      "env": {
+        "BAGS_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}</code></pre>
+
+<h3>3. Restart Claude Desktop</h3>
+<p>You should see "bags-sdk" in the MCP servers list. Try asking:</p>
+<div class="callout callout-tip">💬 "Show me the latest token launches on Bags"</div>
+<p>Claude will call <code>bags_launch_feed</code> and return live data from the Bags.fm API.</p>
+
+<h3>4. Try more commands</h3>
+<pre><code>"What's my SOL balance?" → bags_wallet_balance
+"Get a quote to buy 1 SOL of token XYZ" → bags_quote
+"Show me my claimable fees" → bags_claimable_positions
+"Launch a token called TEST" → bags_launch_token prompt</code></pre>
+</section>
+
+<!-- CONFIGURATION -->
+<section id="configuration">
+<h2>Configuration</h2>
+<p>Everything is env vars. Only <code>BAGS_API_KEY</code> is required. The rest adds capabilities or enables agent mode.</p>
+<table>
+<tr><th>Variable</th><th>Required</th><th>Description</th></tr>
+<tr><td><code>BAGS_API_KEY</code></td><td>Yes</td><td>API key from <a href="https://dev.bags.fm">dev.bags.fm</a></td></tr>
+<tr><td><code>BAGS_API_BASE</code></td><td>No</td><td>Override API base URL. Default: <code>https://public-api-v2.bags.fm/api/v1</code></td></tr>
+<tr><td><code>SOLANA_RPC_URL</code></td><td>No</td><td>Solana RPC endpoint. Default: mainnet-beta. Helius recommended.</td></tr>
+<tr><td><code>HELIUS_API_KEY</code></td><td>No</td><td>Adds token holder data and transaction history from Helius.</td></tr>
+<tr><td><code>NOUS_API_KEY</code></td><td>Agent mode</td><td>Hermes 4 API key for fast routine decisions.</td></tr>
+<tr><td><code>ANTHROPIC_API_KEY</code></td><td>Agent mode</td><td>Claude Sonnet API key for strategic decisions.</td></tr>
+<tr><td><code>AGENT_WALLET_PUBKEY</code></td><td>Agent mode</td><td>Base58 wallet address for agent operations (read-only).</td></tr>
+</table>
+</section>
+
+<!-- TOOLS OVERVIEW -->
+<section id="tools">
+<h2>Tools</h2>
+<p>40 tools, 10 domains. Every tool has typed schemas (Zod in, Zod out), annotations so the AI client knows whether a call is read-only or might change state, and error messages that point you at the fix instead of just saying "500." Data that doesn't change fast gets cached so you don't burn through the 1,000 req/hr API limit.</p>
+<table>
+<tr><th>Domain</th><th>Tools</th><th>Coverage vs bagsx-mcp</th></tr>
+<tr><td>Trading</td><td>2</td><td>Same</td></tr>
+<tr><td>Token Launch</td><td>4 (incl. composed)</td><td>Same + composed workflow</td></tr>
+<tr><td>Fee Sharing</td><td>8 (incl. composer)</td><td><strong>+6 new</strong> (admin, bulk, composer)</td></tr>
+<tr><td>Claiming</td><td>3 (incl. composed)</td><td>Same + composed workflow</td></tr>
+<tr><td>Partner</td><td>3</td><td><strong>All new</strong></td></tr>
+<tr><td>Dexscreener</td><td>3</td><td><strong>All new</strong></td></tr>
+<tr><td>Agent Auth</td><td>7 (incl. composed)</td><td><strong>All new</strong></td></tr>
+<tr><td>Analytics</td><td>4</td><td><strong>+2 new</strong> (claim-stats, top-tokens)</td></tr>
+<tr><td>State</td><td>3</td><td>Same</td></tr>
+<tr><td>Solana</td><td>3</td><td><strong>+2 new</strong> (balance, holdings)</td></tr>
+</table>
+</section>
+
+<!-- RESOURCES -->
+<section id="resources">
+<h2>Resources</h2>
+<p>Resources are read-only data the AI can look at without making a tool call. When Claude wants to check what tokens exist before deciding what to do, it reads a resource instead of calling <code>bags_launch_feed</code> as a tool. Four are available:</p>
+<table>
+<tr><th>Resource</th><th>URI</th><th>Type</th><th>Cache</th></tr>
+<tr><td>Launch Feed</td><td><code>bags://launches</code></td><td>Static</td><td>5 min</td></tr>
+<tr><td>Pools</td><td><code>bags://pools</code></td><td>Static</td><td>5 min</td></tr>
+<tr><td>Token Detail</td><td><code>bags://token/{mint}</code></td><td>Template</td><td>2 min</td></tr>
+<tr><td>Portfolio</td><td><code>bags://portfolio/{wallet}</code></td><td>Template</td><td>2 min</td></tr>
+</table>
+<p>Template resources take a parameter in the URI (like a token mint or wallet address). The token detail resource pulls pool state, creators, and lifetime fees into one response, which saves the AI three separate tool calls.</p>
+</section>
+
+<!-- PROMPTS -->
+<section id="prompts">
+<h2>Prompts</h2>
+<p>Prompts are recipes for multi-step operations. Select one and the AI gets step-by-step instructions: which tools to call, in what order, and what to do with the results. You still approve and sign everything.</p>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">WORKFLOW</span><span class="tool-name">bags_launch_token</span></div>
+<p>Solo token launch. Args: name, symbol, description, image URL, creator wallet, initial buy SOL.</p>
+<p>Flow: resolve_wallet → compose_fee_config (solo) → create_token_info → create_fee_config → create_launch_tx</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">WORKFLOW</span><span class="tool-name">bags_launch_team_token</span></div>
+<p>Team launch with multi-party fee splits. Args include team members as <code>platform:username:percentage</code>.</p>
+<p>Flow: resolve_wallet ×N → compose_fee_config → create_token_info → create_fee_config → create_launch_tx → dexscreener_check</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">WORKFLOW</span><span class="tool-name">bags_analyze_fees</span></div>
+<p>Fee earnings analysis for a token or wallet. Aggregates lifetime fees, claim events, creators, and stats.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">WORKFLOW</span><span class="tool-name">bags_setup_partner</span></div>
+<p>Create a partner config and understand how to use it. Default 25% fee on tokens launched through your key.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">WORKFLOW</span><span class="tool-name">bags_claim_all</span></div>
+<p>Batch claim all pending fees above a threshold. Returns unsigned transactions for each position.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">WORKFLOW</span><span class="tool-name">bags_portfolio_overview</span></div>
+<p>Full portfolio summary: SOL balance, token holdings, claimable positions, and aggregate claim stats.</p>
+</div>
+</section>
+
+<!-- FEE COMPOSER -->
+<section id="fee-composer">
+<h2>Fee Config Composer</h2>
+<p>Bags.fm supports up to 100 fee claimers per token. The raw API expects arrays of wallet addresses and basis points that need to sum to exactly 10,000. That's tedious and error-prone. The Fee Config Composer handles the math, validates your config, and ships with presets for the patterns people actually use.</p>
+
+<div class="callout callout-info">ℹ Bags.fm splits 1% of all trading volume among fee claimers. BPS (basis points) must sum to exactly 10,000 (= 100%). Each claimer is identified by a social provider + username.</div>
+
+<h3>Fluent API</h3>
+<div class="code-title">TypeScript</div>
+<pre><code>import { FeeConfigBuilder } from 'bags-sdk-mcp';
+
+const config = FeeConfigBuilder.create()
+  .addCreator('twitter', 'nikki', 5000)       // 50%
+  .addRecipient('twitter', 'alice', 3000)     // 30%
+  .addDividendsBot(2000)                       // 20% to holders
+  .validate();
+// { valid: true, errors: [] }</code></pre>
+
+<h3>Templates</h3>
+<table>
+<tr><th>Template</th><th>Description</th><th>Usage</th></tr>
+<tr><td><code>soloCreator</code></td><td>100% to one person</td><td><code>FeeConfigBuilder.soloCreator('twitter', 'you')</code></td></tr>
+<tr><td><code>creatorPlusDividends</code></td><td>Creator + DividendsBot (default 50/50)</td><td><code>FeeConfigBuilder.creatorPlusDividends('twitter', 'you')</code></td></tr>
+<tr><td><code>teamSplit</code></td><td>Even split across members</td><td><code>FeeConfigBuilder.teamSplit([{provider, username}, ...])</code></td></tr>
+<tr><td><code>influencerLaunch</code></td><td>Creator 30% + influencers + DividendsBot 20%</td><td><code>FeeConfigBuilder.influencerLaunch(creator, influencers)</code></td></tr>
+</table>
+
+<h3>Validation rules</h3>
+<p>The validator catches the mistakes you'd expect: BPS that don't add up, duplicate recipients, empty arrays, negative values. If you end up with more than 15 claimers, it warns you that Address Lookup Tables are needed (the SDK handles that part).</p>
+
+<h3>As an MCP tool</h3>
+<p>The <code>bags_compose_fee_config</code> tool exposes this as either <code>mode: "custom"</code> (manual recipients) or <code>mode: "template"</code> (use a preset). It validates and returns the config without submitting to the API, so you can review before committing.</p>
+</section>
+
+<!-- CACHING -->
+<section id="caching">
+<h2>Caching &amp; Rate Limits</h2>
+<p>The Bags.fm API gives you <strong>1,000 requests per hour</strong>. That goes fast when an AI agent starts enriching 20 tokens in a single conversation, pulling creator data, fees, and pool state for each one. Five cache tiers, based on how often the data actually changes:</p>
+<table>
+<tr><th>Tier</th><th>TTL</th><th>What's cached</th></tr>
+<tr><td>Immutable</td><td>Forever</td><td>Social → wallet resolution (never changes)</td></tr>
+<tr><td>Stable</td><td>10 min</td><td>Creators, pool configs, partner configs</td></tr>
+<tr><td>Moderate</td><td>5 min</td><td>Lifetime fees, claim stats, token feed, pools</td></tr>
+<tr><td>Volatile</td><td>2 min</td><td>Claimable positions</td></tr>
+<tr><td>None</td><td>Never cached</td><td>Quotes, transactions, auth, send-tx</td></tr>
+</table>
+<p>It's a <code>Map</code> with TTL expiry. Nothing fancy, no Redis, no external deps. Entries expire on read. You can clear a whole category at once with prefix-based invalidation if you need to force-refresh something.</p>
+</section>
+
+<!-- ZERO CUSTODY -->
+<section id="zero-custody">
+<h2>Zero-Custody Design</h2>
+<p>BagsSDK <strong>never stores or handles private keys</strong>. Every transaction-generating tool returns an unsigned base64-encoded <code>VersionedTransaction</code>. The user signs externally with their wallet (Phantom, Solflare, Backpack).</p>
+<p>The only tool that sends anything on-chain is <code>bags_send_transaction</code>, which requires a <strong>pre-signed</strong> transaction as input. The signing happens in your wallet, not in BagsSDK.</p>
+<div class="callout callout-warn">⚠ Never share your private key with any MCP server. BagsSDK doesn't ask for it and doesn't need it.</div>
+</section>
+
+<!-- TOOL REFERENCE: TRADING -->
+<section id="tools-trading">
+<h2>Trading</h2>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_quote</span></div>
+<p>Get a swap quote for any token pair on Bags.fm.</p>
+<p><strong>Input:</strong> <code>tokenMint</code>, <code>side</code> ("buy"|"sell"), <code>amount</code> (number), <code>slippageBps</code> (optional)</p>
+<p><strong>Output:</strong> Quote with inAmount, outAmount, minOutAmount, priceImpactPct.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_swap</span></div>
+<p>Create an unsigned swap transaction. Gets a quote first, then builds the transaction.</p>
+<p><strong>Input:</strong> <code>tokenMint</code>, <code>side</code>, <code>amount</code>, <code>walletAddress</code>, <code>slippageBps</code> (optional)</p>
+<p><strong>Output:</strong> Unsigned base64 VersionedTransaction + quote details.</p>
+</div>
+</section>
+
+<!-- TOOL REFERENCE: LAUNCH -->
+<section id="tools-launch">
+<h2>Token Launch</h2>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_launch_feed</span></div>
+<p>Retrieve the live token launch feed. Returns recent and active launches with status, metadata, and creator info.</p>
+<p><strong>Input:</strong> <code>limit</code> (optional), <code>offset</code> (optional). Cached 5 min.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_create_token_info</span></div>
+<p>Step 1 of launching a token. Uploads metadata (name, symbol, description, image) to IPFS via Bags API.</p>
+<p><strong>Input:</strong> <code>name</code> (max 32), <code>symbol</code> (max 10), <code>description</code> (max 1000), <code>imageUrl</code>, optional socials.</p>
+<p><strong>Output:</strong> <code>tokenMint</code>, <code>tokenMetadata</code>, <code>uri</code> (IPFS).</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_create_launch_tx</span></div>
+<p>Step 3 of launching (after fee config). Builds the unsigned launch transaction.</p>
+<p><strong>Input:</strong> <code>ipfs</code> (URI from create_token_info), <code>tokenMint</code>, <code>wallet</code>, <code>initialBuyLamports</code>, <code>configKey</code> (from fee config), optional tip.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">COMPOSED</span><span class="tool-name">bags_launch_token</span></div>
+<p>Full launch workflow in one call: create_token_info → create_fee_config → create_launch_tx. Returns all unsigned transactions in signing order.</p>
+</div>
+</section>
+
+<!-- TOOL REFERENCE: FEES -->
+<section id="tools-fees">
+<h2>Fee Sharing</h2>
+<div class="callout callout-info">ℹ 8 tools covering the fee-sharing lifecycle: resolving social handles to wallets, creating configs, admin operations, and claim history.</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_resolve_wallet</span></div>
+<p>Resolve a social media handle to a Bags.fm Solana wallet address. Supports: twitter, tiktok, kick, instagram, onlyfans, github, apple, google, email, solana, moltbook.</p>
+<p>Cached permanently (mapping never changes).</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_resolve_wallets_bulk</span></div>
+<p>Batch resolve multiple social handles at once. Uses Promise.allSettled for partial failure tolerance.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_create_fee_config</span></div>
+<p>Create an on-chain fee-sharing config. Validates BPS sum to 10,000, checks for duplicates.</p>
+<p><strong>Output:</strong> <code>meteoraConfigKey</code> (pass to launch transaction), unsigned config transactions.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-composed">COMPOSED</span><span class="tool-name">bags_compose_fee_config</span></div>
+<p>Build and validate a fee config without submitting. Supports templates (solo, team, creator-dividends, influencer, dao) and custom splits.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_fee_admin_list</span></div>
+<p>List all fee share configs administered by a wallet.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_fee_admin_transfer</span></div>
+<p>Transfer fee share admin rights to another wallet. <strong>Irreversible.</strong></p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_fee_admin_update</span></div>
+<p>Update claimers and BPS on an existing fee config.</p>
+</div>
+
+<div class="tool">
+<div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_claim_events</span></div>
+<p>Claim event history for a token. Supports offset pagination and time-range queries.</p>
+</div>
+</section>
+
+<!-- TOOL REFERENCE: CLAIMING -->
+<section id="tools-claiming">
+<h2>Claiming</h2>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_claimable_positions</span></div><p>List all claimable fee positions for a wallet. Shows baseMint, total claimable lamports/SOL. Cached 2 min.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_claim_fees</span></div><p>Generate unsigned claim transaction(s) for a specific token position.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-composed">COMPOSED</span><span class="tool-name">bags_claim_all_fees</span></div><p>Batch claim all positions above a minimum threshold. Returns per-token unsigned transactions.</p></div>
+</section>
+
+<!-- TOOL REFERENCE: PARTNER -->
+<section id="tools-partner">
+<h2>Partner</h2>
+<div class="callout callout-tip">Partners earn 25% (2,500 BPS) of platform fees from tokens launched through their partner key. If you're building an app on Bags, this is how you monetize it.</div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_partner_stats</span></div><p>Fee earning statistics for a partner wallet: total earned, tokens using config, claim history.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_partner_claim</span></div><p>Generate unsigned transaction for claiming partner fees.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_partner_config</span></div><p>Create or retrieve a partner configuration. Default 25% fee.</p></div>
+</section>
+
+<!-- TOOL REFERENCE: DEXSCREENER -->
+<section id="tools-dexscreener">
+<h2>Dexscreener</h2>
+<div class="callout callout-tip">Pay for Dexscreener Enhanced Token Info profiles programmatically. Check availability, create an order, submit payment.</div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_dexscreener_check</span></div><p>Check if Dexscreener Enhanced Token Info boosting is available for a token.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_dexscreener_order</span></div><p>Create a boost order. Returns orderId and unsigned payment transaction.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_dexscreener_payment</span></div><p>Submit payment confirmation after signing the payment transaction on-chain.</p></div>
+</section>
+
+<!-- TOOL REFERENCE: AGENT -->
+<section id="tools-agent">
+<h2>Agent Auth</h2>
+<div class="callout callout-info">ℹ Bags recently shipped an Agent API for autonomous AI wallets. Two-step flow: init with email, verify, then you get bearer tokens and wallet access.</div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_agent_auth_init</span></div><p>Start agent auth flow. Provide email or social provider.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_agent_auth_login</span></div><p>Complete auth with token + verification code.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_agent_wallet_list</span></div><p>List all wallets associated with the authenticated agent.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_agent_wallet_export</span></div><p>Export wallet public key details. Never exposes private keys.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_agent_keys_list</span></div><p>List all API keys for the authenticated agent.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_agent_keys_create</span></div><p>Create a new API key. Shown once. Security warning included.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-composed">COMPOSED</span><span class="tool-name">bags_agent_bootstrap</span></div><p>Full agent setup guide: auth_init → verify email → auth_login → wallet_list → keys_create → save key.</p></div>
+</section>
+
+<!-- TOOL REFERENCE: ANALYTICS -->
+<section id="tools-analytics">
+<h2>Analytics</h2>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_token_creators</span></div><p>Creator info for a token: wallets, social profiles, royalty BPS, isCreator flag.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_lifetime_fees</span></div><p>Total trading fees collected for a token, in lamports and SOL.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_claim_stats</span></div><p>Aggregate claim statistics for a wallet or token.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_top_tokens</span></div><p>Leaderboard of tokens ranked by lifetime trading fees.</p></div>
+</section>
+
+<!-- TOOL REFERENCE: STATE -->
+<section id="tools-state">
+<h2>State</h2>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_pools</span></div><p>All active Bags liquidity pools with migration status.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_pool</span></div><p>Single pool by token mint: address, reserves, fee config, DBC/DAMM migration status.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_pool_config_keys</span></div><p>Resolve fee claimer vaults to their Meteora pool config key addresses.</p></div>
+</section>
+
+<!-- TOOL REFERENCE: SOLANA -->
+<section id="tools-solana">
+<h2>Solana</h2>
+<div class="tool"><div class="tool-header"><span class="badge badge-write">WRITE</span><span class="tool-name">bags_send_transaction</span></div><p>Broadcast a <strong>signed</strong> transaction. This is the only tool that touches the chain. Returns signature + Solscan explorer URL.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_wallet_balance</span></div><p>SOL balance for any wallet. Direct Solana RPC call, no caching.</p></div>
+<div class="tool"><div class="tool-header"><span class="badge badge-read">READ</span><span class="tool-name">bags_token_holdings</span></div><p>All SPL token accounts with mint, amount, decimals. Filters to non-zero holdings.</p></div>
+</section>
+
+<!-- GUIDES -->
+<section id="flow-portfolio">
+<h2>Guide: Check Portfolio</h2>
+<ol>
+<li><code>bags_wallet_balance</code> — see SOL balance</li>
+<li><code>bags_token_holdings</code> — see all token positions</li>
+<li><code>bags_claimable_positions</code> — see unclaimed fees</li>
+<li>Decide whether to claim</li>
+</ol>
+<div class="callout callout-tip">💬 Or just use the <code>bags_portfolio_overview</code> prompt to do all of this in one step.</div>
+</section>
+
+<section id="flow-claim">
+<h2>Guide: Claim Fees</h2>
+<ol>
+<li><code>bags_claimable_positions</code> — review what's claimable</li>
+<li><code>bags_claim_all_fees</code> with <code>minClaimLamports</code> to skip dust</li>
+<li>Sign each returned transaction in your wallet</li>
+<li><code>bags_send_transaction</code> for each signed tx</li>
+</ol>
+</section>
+
+<section id="flow-solo-launch">
+<h2>Guide: Launch Solo Token</h2>
+<ol>
+<li><code>bags_resolve_wallet</code> — get creator's Bags wallet</li>
+<li><code>bags_create_token_info</code> — upload metadata to IPFS</li>
+<li><code>bags_create_fee_config</code> — set up 100% to creator</li>
+<li><code>bags_create_launch_tx</code> — build the launch transaction</li>
+<li>Sign fee config tx(s) first, then launch tx</li>
+<li><code>bags_send_transaction</code> for each</li>
+</ol>
+</section>
+
+<section id="flow-team-launch">
+<h2>Guide: Launch Team Token</h2>
+<ol>
+<li><code>bags_resolve_wallet</code> ×N — resolve all team members</li>
+<li><code>bags_compose_fee_config</code> — validate the split (e.g., 50/30/20)</li>
+<li><code>bags_create_token_info</code> — upload metadata</li>
+<li><code>bags_create_fee_config</code> — create on-chain config with all wallets</li>
+<li><code>bags_create_launch_tx</code> — build launch tx</li>
+<li>Sign all txs in order</li>
+<li>Optional: <code>bags_dexscreener_check</code> for boost availability</li>
+</ol>
+</section>
+
+<section id="flow-analyze">
+<h2>Guide: Analyze a Token</h2>
+<ol>
+<li><code>bags_lifetime_fees</code> — total fees collected</li>
+<li><code>bags_token_creators</code> — who's earning</li>
+<li><code>bags_claim_events</code> — recent claim activity</li>
+<li><code>bags_claim_stats</code> — aggregate stats</li>
+</ol>
+</section>
+
+<section id="flow-partner">
+<h2>Guide: Set Up as Partner</h2>
+<ol>
+<li><code>bags_partner_config</code> — create partner config (default 25% fee)</li>
+<li>Share the partner wallet and config address with token creators</li>
+<li>When creators use your config in <code>bags_create_fee_config</code>, you earn fees</li>
+<li><code>bags_partner_stats</code> — check earnings</li>
+<li><code>bags_partner_claim</code> — claim partner fees</li>
+</ol>
+</section>
+
+<section id="flow-agent-bootstrap">
+<h2>Guide: Agent Bootstrap</h2>
+<ol>
+<li><code>bags_agent_auth_init</code> with email</li>
+<li>Check email for verification code</li>
+<li><code>bags_agent_auth_login</code> with token + code</li>
+<li><code>bags_agent_wallet_list</code> — discover wallets</li>
+<li><code>bags_agent_keys_create</code> — get an API key</li>
+<li>Save key as <code>BAGS_API_KEY</code> in .env</li>
+</ol>
+</section>
+
+<!-- AGENT MODE -->
+<section id="agent-mode">
+<h2>Agent mode</h2>
+<p>Pass <code>--agent</code> and BagsSDK runs as an autonomous loop instead of waiting for MCP calls. Two LLMs split the work.</p>
+
+<h3>How the routing works</h3>
+<p><strong>Hermes 4</strong> (Nous API, fast, cheap) does the repetitive stuff: checking positions, claiming fees when they cross a threshold, watching the launch feed for new tokens, pulling portfolio status.</p>
+<p><strong>Claude Sonnet</strong> (Anthropic API, slower, smarter) gets the judgment calls: is this new launch worth looking at? What's the best fee config for a 5-person team? Where's the money actually going across my positions?</p>
+<p>The split is simple: if the task involves "should I," it goes to Sonnet. If it's "do the thing," Hermes handles it.</p>
+
+<h3>Strategies</h3>
+<table>
+<tr><th>Strategy</th><th>CLI flag</th><th>What it does</th></tr>
+<tr><td>Auto-claim</td><td><code>--auto-claim</code></td><td>Checks positions every 5 min. Claims anything above 0.01 SOL.</td></tr>
+<tr><td>Launch monitor</td><td><code>--monitor</code></td><td>Watches the feed every 30s. Flags interesting launches. Sends them to Sonnet if they match your criteria.</td></tr>
+<tr><td>Portfolio rebalance</td><td>Code only</td><td>Pulls all your positions, asks Sonnet what to do about them.</td></tr>
+<tr><td>Fee optimizer</td><td>Code only</td><td>Reads your fee configs, asks Sonnet if they could be better.</td></tr>
+</table>
+
+<div class="code-title">CLI usage</div>
+<pre><code>bags-sdk-mcp --agent --auto-claim          # Auto-claim only
+bags-sdk-mcp --agent --monitor              # Launch monitor only
+bags-sdk-mcp --agent --auto-claim --monitor # Both strategies</code></pre>
+</section>
+
+<!-- TRANSPORTS -->
+<section id="transports">
+<h2>Transports</h2>
+<h3>stdio (default)</h3>
+<p>Works with Claude Desktop, Cursor, and MCP Inspector out of the box. Just run <code>bags-sdk-mcp</code> or <code>npx bags-sdk-mcp</code>.</p>
+
+<h3>Streamable HTTP</h3>
+<p>For remote connections or multi-client setups. Run <code>bags-sdk-mcp --http</code> to start an Express server on port 3000 (or <code>--port=8080</code> for a custom port).</p>
+<p>Two endpoints: <code>POST /mcp</code> for MCP requests and <code>GET /health</code> for uptime checks. Each request is stateless.</p>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+<h2>Architecture</h2>
+<h3>SDK method mapping</h3>
+<p>The official <code>@bagsfm/bags-sdk</code> organizes methods by service. Here's where things live, because the names aren't always obvious:</p>
+<table>
+<tr><th>Service</th><th>Property</th><th>Key methods</th></tr>
+<tr><td>Trading</td><td><code>sdk.trade</code></td><td>getQuote(), createSwapTransaction()</td></tr>
+<tr><td>Fees/Claiming</td><td><code>sdk.fee</code></td><td>getAllClaimablePositions(), getClaimTransaction()</td></tr>
+<tr><td>State</td><td><code>sdk.state</code></td><td>getTokenCreators(), getTokenLifetimeFees(), getTopTokensByLifetimeFees()</td></tr>
+<tr><td>Config</td><td><code>sdk.config</code></td><td>createBagsFeeShareConfig()</td></tr>
+<tr><td>Token Launch</td><td><code>sdk.tokenLaunch</code></td><td>createTokenInfoAndMetadata(), createLaunchTransaction()</td></tr>
+<tr><td>Partner</td><td><code>sdk.partner</code></td><td>getPartnerConfig(), getPartnerConfigCreationTransaction()</td></tr>
+<tr><td>Fee Admin</td><td><code>sdk.feeShareAdmin</code></td><td>getAdminTokenMints(), getTransferAdminTransaction()</td></tr>
+<tr><td>Dexscreener</td><td><code>sdk.dexscreener</code></td><td>checkOrderAvailability(), createOrder(), submitPayment()</td></tr>
+</table>
+
+<h3>Error handling</h3>
+<p>Every tool catches errors and returns a message you can act on instead of a stack trace:</p>
+<table>
+<tr><th>Status</th><th>Message</th></tr>
+<tr><td>401</td><td>"Check your BAGS_API_KEY. Get one at dev.bags.fm"</td></tr>
+<tr><td>429</td><td>"Rate limited. BagsSDK caches responses. Retry in 60 seconds."</td></tr>
+<tr><td>404</td><td>"Resource not found. Verify addresses/mints are correct."</td></tr>
+<tr><td>Network error</td><td>"Cannot reach Bags API. Check network and BAGS_API_BASE."</td></tr>
+</table>
+
+<h3>Technology stack</h3>
+<table>
+<tr><th>Layer</th><th>Choice</th></tr>
+<tr><td>Language</td><td>TypeScript (strict mode)</td></tr>
+<tr><td>MCP SDK</td><td>@modelcontextprotocol/sdk ^1.12.0</td></tr>
+<tr><td>Bags SDK</td><td>@bagsfm/bags-sdk ^1.2.7</td></tr>
+<tr><td>Solana</td><td>@solana/web3.js ^1.95.0</td></tr>
+<tr><td>Schema</td><td>zod ^3.25.0</td></tr>
+<tr><td>HTTP</td><td>express ^4.21.0</td></tr>
+<tr><td>Build</td><td>tsc</td></tr>
+<tr><td>Test</td><td>vitest ^3.0.0</td></tr>
+</table>
+</section>
+
+<!-- CONTRIBUTING -->
+<section id="contributing">
+<h2>Contributing</h2>
+<h3>Adding a new tool</h3>
+<ol>
+<li>Create a file in the appropriate <code>src/tools/{domain}/</code> directory</li>
+<li>Define a Zod input schema and output schema</li>
+<li>Set annotations: <code>readOnlyHint</code>, <code>destructiveHint</code>, <code>idempotentHint</code>, <code>openWorldHint</code></li>
+<li>Implement the handler with try/catch and actionable error messages</li>
+<li>Register it in <code>src/tools/_registry.ts</code></li>
+<li>Add a cache tier if the data is stable enough to cache</li>
+</ol>
+
+<h3>Running locally</h3>
+<div class="code-title">Terminal</div>
+<pre><code>git clone https://github.com/your-repo/bags-sdk-mcp
+cd bags-sdk-mcp
+npm install
+cp .env.example .env  # Add your BAGS_API_KEY
+npm run build
+npm run inspect       # Opens MCP Inspector for testing</code></pre>
+
+<h3>Testing</h3>
+<pre><code>npm test              # Run vitest
+npx @modelcontextprotocol/inspector node dist/bin/bags-sdk-mcp.js</code></pre>
+
+<p style="margin-top:60px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-dim);font-size:13px;">BagsSDK is MIT licensed. Built for the <a href="https://bags.fm/hackathon">Bags Hackathon 2026</a>.</p>
+</section>
+
+</main>
+
+<!-- TOC (auto-generated) -->
+<aside class="toc" id="toc"></aside>
+
+<script>
+// Generate TOC from h2/h3 elements
+const toc=document.getElementById('toc');
+const headings=document.querySelectorAll('main h2, main h3');
+let html='<div class="toc-title">On this page</div>';
+headings.forEach(h=>{
+  const id=h.closest('section')?.id||h.id;
+  if(!id)return;
+  const indent=h.tagName==='H3'?'padding-left:12px;':'';
+  html+=`<a href="#${id}" style="${indent}">${h.textContent}</a>`;
+});
+toc.innerHTML=html;
+
+// Active sidebar link on scroll
+const sections=document.querySelectorAll('section[id]');
+const navLinks=document.querySelectorAll('.sidebar a.nav-link');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navLinks.forEach(l=>l.classList.remove('active'));
+      const link=document.querySelector(`.sidebar a[href="#${e.target.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+sections.forEach(s=>observer.observe(s));
+
+// Search filter
+function filterNav(q){
+  q=q.toLowerCase();
+  navLinks.forEach(l=>{
+    l.style.display=!q||l.textContent.toLowerCase().includes(q)?'block':'none';
+  });
+}
+</script>
+</body>
+</html>

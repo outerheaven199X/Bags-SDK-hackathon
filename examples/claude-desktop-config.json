@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bags-sdk-mcp": {
+      "command": "npx",
+      "args": ["bags-sdk-mcp"],
+      "env": {
+        "BAGS_API_KEY": "your-api-key-from-dev.bags.fm"
+      }
+    }
+  }
+}
