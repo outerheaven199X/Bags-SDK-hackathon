@@ -44,13 +44,19 @@ export function registerLaunchTeamTokenPrompt(server: McpServer) {
 Show them this summary in a clean format, including a breakdown of who gets what %.
 Ask: "Does this look right?"
 
-If they confirm, execute these steps silently (do NOT narrate each tool call):
-  1. Parse team members and resolve each wallet via bags_resolve_wallet
-  2. bags_create_token_info with the token details
-  3. bags_create_fee_config with payer=${creatorWallet}, baseMint from step 2, fee splits from step 1 (convert percentages to basis points internally — never show BPS to the user)
-  4. bags_create_launch_tx with URI + tokenMint from step 2, configKey from step 3, initialBuyLamports = ${initialBuySol} * 1e9
+If they confirm, this is a two-signing-step process. Do NOT narrate tool names.
 
-Then return ALL unsigned transactions in signing order and tell them to sign in their wallet.
+STEP A — Set up (silent):
+  1. Parse team members. For each, if it is a social handle, resolve via bags_resolve_wallet. If already a Solana address, use directly.
+  2. bags_create_token_info with the token details. Save both tokenMint and uri from the response.
+  3. bags_create_fee_config with payer=${creatorWallet}, baseMint from step 2, fee splits from step 1 (convert percentages to basis points internally — never show BPS to the user).
+  Return the fee config transactions and tell the user: "Sign these to set up your fee split."
+  WAIT for the user to confirm they signed before continuing.
+
+STEP B — Launch (silent):
+  4. bags_create_launch_tx with the uri + tokenMint from step 2, configKey from step 3, initialBuyLamports = ${initialBuySol} * 1e9.
+  Return the launch transaction and tell the user: "Sign this and your coin is live."
+
 If any step fails, explain the error in plain language — no tool names, no jargon.`,
         },
       }],

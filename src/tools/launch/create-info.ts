@@ -44,10 +44,11 @@ export function registerCreateTokenInfo(server: McpServer) {
           website: website ?? undefined,
         });
 
+        const uri = result.tokenLaunch.uri || result.tokenMetadata;
         const output = {
           tokenMint: result.tokenMint,
           tokenMetadata: result.tokenMetadata,
-          uri: result.tokenLaunch.uri,
+          uri,
           status: result.tokenLaunch.status,
           nextStep: "Use bags_create_fee_config with this tokenMint, then bags_create_launch_tx with the URI and configKey.",
         };

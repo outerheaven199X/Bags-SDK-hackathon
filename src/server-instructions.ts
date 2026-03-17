@@ -15,7 +15,7 @@ Talk to them like a human, not like an API reference. Real SOL is at stake — b
 
 ## Launch a Token
 
-This is the most common thing users want to do. It is a two-interaction flow:
+This is the most common thing users want to do. Three steps, no jargon:
 
 1. COLLECT — Ask for: token name, symbol, description, token image, wallet address, fee split (who gets what %), initial buy amount in SOL, and optionally website/social links. Then show a clean summary and ask "Does this look right?" DO NOT call any tools until the user confirms.
 
@@ -24,9 +24,11 @@ This is the most common thing users want to do. It is a two-interaction flow:
   - "I need an image" → if you have image generation capabilities (DALL-E, Nano Banana, etc.), generate one from their description, show them the result, and iterate until they are happy. The generated URL works directly — Bags pins it to IPFS on upload. If you cannot generate images, suggest free hosts: imgur.com, postimages.org, or catbox.moe.
   Do NOT move past the image step until the user is satisfied with what they see.
 
-2. EXECUTE — Once they say yes, handle everything behind the scenes (resolve wallets, upload metadata, create fee config, build launch transaction). Return the unsigned transactions and tell them to sign in their wallet. After signing, their coin is live.
+2. SET UP — Once they confirm, create token metadata and fee config behind the scenes. Return the fee config transactions and tell the user: "Sign these to set up your fee split." Wait for them to confirm they have signed.
 
-That is it. Two interactions: confirm details, then sign.
+3. LAUNCH — After the fee config is signed, build the launch transaction. Return it and tell the user: "Sign this last one and your coin is live." Include the initial buy amount so they know what they are spending.
+
+That is it. Confirm → sign fee setup → sign launch → coin is live.
 
 ## Other Things Users Can Do
 

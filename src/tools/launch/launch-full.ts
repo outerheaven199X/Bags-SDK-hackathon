@@ -1,4 +1,4 @@
-/** bags_launch_token — Composed workflow: create info + fee config + launch tx in one call. */
+/** bags_launch_token — Composed workflow: create info + fee config in one call (step 1 of launch). */
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -30,7 +30,7 @@ const inputSchema = {
 export function registerLaunchTokenFull(server: McpServer) {
   server.tool(
     "bags_launch_token",
-    "Full token launch workflow in one call: creates token metadata, sets up fee sharing config, and builds the launch transaction. Returns all unsigned transactions to sign in order. This is the easiest way to launch a token on Bags.fm.",
+    "Token launch setup: creates token metadata on IPFS and fee sharing config. Returns unsigned fee config transactions to sign. After signing, call bags_create_launch_tx to build the final launch transaction.",
     inputSchema,
     async (params) => {
       try {
@@ -49,7 +49,7 @@ export function registerLaunchTokenFull(server: McpServer) {
         });
 
         const tokenMint = infoResult.tokenMint;
-        const uri = infoResult.tokenLaunch.uri;
+        const uri = infoResult.tokenLaunch.uri || infoResult.tokenMetadata;
 
         const configResult = await bagsPost<CreateFeeShareConfigResponse>("/fee-share/config", {
           payer: wallet,
@@ -64,27 +64,18 @@ export function registerLaunchTokenFull(server: McpServer) {
         const configKey = configResult.response!.meteoraConfigKey;
         const feeConfigTxs = configResult.response!.transactions;
 
-        const launchResult = await bagsPost<{ transaction: string }>("/token-launch/create-launch-transaction", {
-          ipfs: uri,
-          tokenMint,
-          wallet,
-          initialBuyLamports,
-          configKey,
-        });
-        if (!launchResult.success) {
-          return mcpError(new Error(`Launch transaction failed: ${launchResult.error}`));
-        }
-
         const output = {
           tokenMint,
+          uri,
           symbol: symbol.toUpperCase(),
           name,
           configKey,
+          wallet,
+          initialBuyLamports,
           initialBuySol: lamportsToSol(initialBuyLamports),
           feeConfigTransactions: feeConfigTxs.map((t) => t.transaction),
-          launchTransaction: launchResult.response!.transaction,
-          totalTransactionsToSign: feeConfigTxs.length + 1,
-          instructions: `Sign all ${feeConfigTxs.length + 1} transactions in order: fee config txs first, then the launch tx. Use bags_send_transaction for each.`,
+          transactionsToSign: feeConfigTxs.length,
+          nextStep: `Sign the ${feeConfigTxs.length} fee config transaction(s), then call bags_create_launch_tx with tokenMint="${tokenMint}", uri="${uri}", configKey="${configKey}", wallet="${wallet}", and initialBuyLamports=${initialBuyLamports}.`,
         };
 
         return {
