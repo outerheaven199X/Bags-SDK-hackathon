@@ -13,17 +13,20 @@ import { registerAnalyzeFeesPrompt } from "./prompts/analyze-fees.js";
 import { registerSetupPartnerPrompt } from "./prompts/setup-partner.js";
 import { registerClaimAllPrompt } from "./prompts/claim-all.js";
 import { registerPortfolioOverviewPrompt } from "./prompts/portfolio-overview.js";
+import { registerGettingStartedPrompt } from "./prompts/getting-started.js";
+import { registerCreateCustomToolPrompt } from "./prompts/create-custom-tool.js";
 import { SERVER_NAME, SERVER_VERSION } from "./utils/constants.js";
+import { SERVER_INSTRUCTIONS } from "./server-instructions.js";
 
 /**
  * Create a fully configured BagsSDK MCP server.
- * Registers 40 tools, 4 resources, and 6 prompts.
+ * Registers tools, resources, and prompts with auto-loaded instructions.
  * @returns An McpServer instance ready for transport connection.
  */
 export function createServer(): McpServer {
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
-    { capabilities: { logging: {} } },
+    { capabilities: { logging: {} }, instructions: SERVER_INSTRUCTIONS },
   );
 
   registerAllTools(server);
@@ -39,6 +42,8 @@ export function createServer(): McpServer {
   registerSetupPartnerPrompt(server);
   registerClaimAllPrompt(server);
   registerPortfolioOverviewPrompt(server);
+  registerGettingStartedPrompt(server);
+  registerCreateCustomToolPrompt(server);
 
   return server;
 }
