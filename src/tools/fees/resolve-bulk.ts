@@ -1,22 +1,31 @@
-/** bags_resolve_wallets_bulk — Resolve multiple social handles to wallets in one call. */
+/** bags_resolve_wallets_bulk — Resolve multiple social handles to wallets via the bulk API. */
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { bagsGet } from "../../client/bags-rest.js";
+import { bagsPost } from "../../client/bags-rest.js";
 import { cache, CACHE_TTL } from "../../client/cache.js";
 import { mcpError } from "../../utils/errors.js";
-import type { FeeShareWalletResponse, SupportedProvider } from "../../client/types.js";
+import type { SupportedProvider } from "../../client/types.js";
+
+const PROVIDER_VALUES = [
+  "twitter", "tiktok", "kick", "instagram", "onlyfans",
+  "github", "apple", "google", "email", "solana", "moltbook",
+] as const;
 
 const inputSchema = {
   entries: z.array(z.object({
-    provider: z.enum([
-      "twitter", "tiktok", "kick", "instagram", "onlyfans",
-      "github", "apple", "google", "email", "solana", "moltbook",
-    ]),
-    username: z.string(),
-  })).describe("Array of {provider, username} pairs to resolve"),
+    provider: z.enum(PROVIDER_VALUES),
+    username: z.string().min(1).max(100),
+  })).min(1).max(100).describe("Array of {provider, username} pairs to resolve (max 100)"),
 };
+
+interface BulkResolveItem {
+  username: string;
+  provider: SupportedProvider;
+  platformData: { id: string; username: string; display_name: string; avatar_url: string } | null;
+  wallet: string | null;
+}
 
 /**
  * Register the bags_resolve_wallets_bulk tool on the given MCP server.
@@ -25,39 +34,30 @@ const inputSchema = {
 export function registerResolveWalletsBulk(server: McpServer) {
   server.tool(
     "bags_resolve_wallets_bulk",
-    "Resolve multiple social handles to Bags.fm wallets in a single call. Returns an array of resolved wallets in the same order as the input. Failed resolutions include error details.",
+    "Resolve multiple social handles to Bags.fm wallets in a single API call. Returns an array with wallet addresses (null if not found).",
     inputSchema,
     async ({ entries }) => {
       try {
-        const results = await Promise.allSettled(
-          entries.map(async ({ provider, username }) => {
-            const cacheKey = `resolve:${provider}:${username}`;
-            const cached = cache.get<FeeShareWalletResponse>(cacheKey);
-            if (cached) return { ...cached, _source: "cache" as const };
+        const items = entries.map(({ provider, username }) => ({ provider, username }));
 
-            const result = await bagsGet<FeeShareWalletResponse>("/fee-share/resolve-wallet", {
-              provider,
-              username,
-            });
-
-            if (!result.success) {
-              throw new Error(result.error ?? `Could not resolve ${provider}/${username}`);
-            }
-
-            cache.set(cacheKey, result.response, CACHE_TTL.immutable);
-            return { ...result.response!, _source: "api" as const };
-          }),
+        const result = await bagsPost<BulkResolveItem[]>(
+          "/token-launch/fee-share/wallet/v2/bulk",
+          { items },
         );
 
-        const output = results.map((r, i) => {
-          if (r.status === "fulfilled") {
-            return { input: entries[i], resolved: true, ...r.value };
+        if (!result.success) {
+          return mcpError(new Error(result.error ?? "Bulk resolve failed"));
+        }
+
+        const resolved = result.response!;
+        for (const item of resolved) {
+          if (item.wallet) {
+            cache.set(`resolve:${item.provider}:${item.username}`, item, CACHE_TTL.immutable);
           }
-          return { input: entries[i], resolved: false, error: r.reason?.message ?? "Unknown error" };
-        });
+        }
 
         return {
-          content: [{ type: "text" as const, text: JSON.stringify(output, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(resolved, null, 2) }],
         };
       } catch (error) {
         return mcpError(error);

@@ -35,7 +35,7 @@ export function registerResolveWallet(server: McpServer) {
           };
         }
 
-        const result = await bagsGet<FeeShareWalletResponse>("/fee-share/resolve-wallet", {
+        const result = await bagsGet<FeeShareWalletResponse>("/token-launch/fee-share/wallet/v2", {
           provider,
           username,
         });

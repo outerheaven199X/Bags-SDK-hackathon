@@ -1,13 +1,14 @@
-/** bags_agent_wallet_export — Export an agent wallet's public key details. */
+/** bags_agent_wallet_export — Export an agent wallet's private key. */
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { bagsGet } from "../../client/bags-rest.js";
+import { bagsPost } from "../../client/bags-rest.js";
 import { mcpError } from "../../utils/errors.js";
 
 const inputSchema = {
-  walletId: z.string().describe("Wallet ID from bags_agent_wallet_list"),
+  token: z.string().describe("JWT from bags_agent_auth_login"),
+  walletAddress: z.string().describe("Base58 Solana public key from bags_agent_wallet_list"),
 };
 
 /**
@@ -17,17 +18,25 @@ const inputSchema = {
 export function registerAgentWalletExport(server: McpServer) {
   server.tool(
     "bags_agent_wallet_export",
-    "Export the public key details for an agent wallet. This is read-only — no private keys are ever exposed. Use the wallet ID from bags_agent_wallet_list.",
+    "Export the private key for an agent wallet. Handle with extreme care — never share or log the returned key.",
     inputSchema,
-    async ({ walletId }) => {
+    async ({ token, walletAddress }) => {
       try {
-        const result = await bagsGet<unknown>(`/agent/wallets/${walletId}/export`);
+        const result = await bagsPost<{ privateKey: string }>("/agent/wallet/export", {
+          token,
+          walletAddress,
+        });
+
         if (!result.success) {
           return mcpError(new Error(result.error ?? "Failed to export agent wallet"));
         }
 
         return {
-          content: [{ type: "text" as const, text: JSON.stringify(result.response, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify({
+            walletAddress,
+            privateKey: result.response!.privateKey,
+            warning: "This is a private key. Store it securely and never share it.",
+          }, null, 2) }],
         };
       } catch (error) {
         return mcpError(error);

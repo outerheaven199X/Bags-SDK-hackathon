@@ -40,7 +40,7 @@ export function registerClaimEvents(server: McpServer) {
           return { content: [{ type: "text" as const, text: JSON.stringify(cached, null, 2) }] };
         }
 
-        const result = await bagsGet<unknown>("/fee-share/claim-events", params);
+        const result = await bagsGet<unknown>("/fee-share/token/claim-events", params);
         if (!result.success) {
           return mcpError(new Error(result.error ?? "Failed to fetch claim events"));
         }

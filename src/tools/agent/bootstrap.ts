@@ -21,14 +21,14 @@ export function registerAgentBootstrap(server: McpServer) {
         const output = {
           workflow: "Agent Bootstrap",
           steps: [
-            { step: 1, tool: "bags_agent_auth_init", description: "Start auth with your email or OAuth provider" },
-            { step: 2, action: "Check email/provider for verification code" },
-            { step: 3, tool: "bags_agent_auth_login", description: "Complete auth with the verification code" },
-            { step: 4, tool: "bags_agent_wallet_list", description: "Discover your agent wallets" },
-            { step: 5, tool: "bags_agent_keys_create", description: "Create an API key for programmatic access" },
+            { step: 1, tool: "bags_agent_auth_init", description: "Start auth with your Moltbook username" },
+            { step: 2, action: "Post the verificationPostContent on Moltbook" },
+            { step: 3, tool: "bags_agent_auth_login", description: "Complete auth with publicIdentifier, secret, and postId" },
+            { step: 4, tool: "bags_agent_wallet_list", description: "List your agent wallets (pass JWT token)" },
+            { step: 5, tool: "bags_agent_keys_create", description: "Create an API key (pass JWT token and key name)" },
             { step: 6, action: "Add the API key to your .env as BAGS_API_KEY" },
           ],
-          instructions: "Follow these steps in order. Each tool call builds on the previous one. Call bags_agent_auth_init to begin.",
+          instructions: "Follow these steps in order. Each tool call builds on the previous one. Call bags_agent_auth_init with your Moltbook username to begin.",
         };
 
         return {

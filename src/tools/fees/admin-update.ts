@@ -8,10 +8,11 @@ import { mcpError } from "../../utils/errors.js";
 import { validateBpsArray, findDuplicateWallets } from "../../composer/validator.js";
 
 const inputSchema = {
-  admin: z.string().describe("Admin's Base58 wallet address"),
-  configKey: z.string().describe("Fee share config key to update"),
-  claimersArray: z.array(z.string()).describe("New array of Base58 claimer wallet addresses"),
-  basisPointsArray: z.array(z.number()).describe("New BPS array (must sum to 10000)"),
+  baseMint: z.string().describe("Base58 token mint address"),
+  payer: z.string().describe("Transaction payer's Base58 wallet address (must be current admin)"),
+  claimersArray: z.array(z.string()).min(1).max(100).describe("New array of Base58 claimer wallet addresses"),
+  basisPointsArray: z.array(z.number()).min(1).max(100).describe("New BPS array (must sum to 10000)"),
+  additionalLookupTables: z.array(z.string()).optional().describe("Optional lookup table addresses for large configs"),
 };
 
 /**
@@ -21,9 +22,9 @@ const inputSchema = {
 export function registerFeeAdminUpdate(server: McpServer) {
   server.tool(
     "bags_fee_admin_update",
-    "Update the claimers and BPS allocations on an existing fee share config. Only the current admin can do this. Returns an unsigned transaction.",
+    "Update the claimers and BPS allocations on an existing fee share config. Only the current admin can do this. Returns unsigned transactions.",
     inputSchema,
-    async ({ admin, configKey, claimersArray, basisPointsArray }) => {
+    async ({ baseMint, payer, claimersArray, basisPointsArray, additionalLookupTables }) => {
       try {
         const bpsValidation = validateBpsArray(basisPointsArray);
         if (!bpsValidation.valid) {
@@ -39,23 +40,26 @@ export function registerFeeAdminUpdate(server: McpServer) {
           return mcpError(new Error("Claimers and BPS arrays must be the same length."));
         }
 
-        const result = await bagsPost<{ transaction: string }>("/fee-share/admin/update", {
-          admin,
-          configKey,
+        const body: Record<string, unknown> = {
+          baseMint,
+          payer,
           claimersArray,
           basisPointsArray,
-        });
+        };
+        if (additionalLookupTables) body.additionalLookupTables = additionalLookupTables;
 
+        const result = await bagsPost<{ transactions: Array<{ transaction: string }> }>("/fee-share/admin/update-config", body);
         if (!result.success) {
           return mcpError(new Error(result.error ?? "Failed to create admin update transaction"));
         }
 
         return {
           content: [{ type: "text" as const, text: JSON.stringify({
-            configKey,
-            admin,
+            baseMint,
+            payer,
             newClaimersCount: claimersArray.length,
-            unsignedTransaction: result.response!.transaction,
+            transactionCount: result.response!.transactions.length,
+            unsignedTransactions: result.response!.transactions.map((t) => t.transaction),
           }, null, 2) }],
         };
       } catch (error) {

@@ -37,7 +37,7 @@ export function registerClaimStats(server: McpServer) {
           return { content: [{ type: "text" as const, text: JSON.stringify(cached, null, 2) }] };
         }
 
-        const result = await bagsGet<unknown>("/fee-share/claim-stats", params);
+        const result = await bagsGet<unknown>("/token-launch/claim-stats", params);
         if (!result.success) {
           return mcpError(new Error(result.error ?? "Failed to fetch claim stats"));
         }

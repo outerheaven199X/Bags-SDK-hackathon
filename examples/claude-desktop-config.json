@@ -4,7 +4,8 @@
       "command": "npx",
       "args": ["bags-sdk-mcp"],
       "env": {
-        "BAGS_API_KEY": "your-api-key-from-dev.bags.fm"
+        "BAGS_API_KEY": "your-api-key-from-dev.bags.fm",
+        "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com"
       }
     }
   }

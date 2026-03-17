@@ -1,26 +1,19 @@
 # bags-sdk-mcp
 
-The developer toolkit Bags.fm should ship as their official platform.
-
-40 tools. 4 resources. 6 prompts. Fee-config composer. Dual-model agent mode.
+Connect Bags.fm to any MCP-compatible AI agent. Launch, manage, and monitor your coins from your terminal.
 
 [![npm](https://img.shields.io/npm/v/bags-sdk-mcp)](https://www.npmjs.com/package/bags-sdk-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Built for Bags Hackathon 2026](https://img.shields.io/badge/Bags%20Hackathon-Q1%202026-7C3AED)](https://bags.fm)
 
 ---
 
-## Install
+## Get started
 
-```bash
-npx bags-sdk-mcp
-```
+**You need one thing:** a Bags API key from [dev.bags.fm](https://dev.bags.fm).
 
-That's it. One line. API key required — get one at [dev.bags.fm](https://dev.bags.fm).
+### Option A: Claude Desktop / Cursor
 
-## Claude Desktop Setup
-
-Add to your `claude_desktop_config.json`:
+Add this to your MCP config:
 
 ```json
 {
@@ -29,165 +22,195 @@ Add to your `claude_desktop_config.json`:
       "command": "npx",
       "args": ["bags-sdk-mcp"],
       "env": {
-        "BAGS_API_KEY": "your-key-here"
+        "BAGS_API_KEY": "your-key-here",
+        "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com"
       }
     }
   }
 }
 ```
 
-## What You Get
+Config file locations:
+- **Claude Desktop (Windows):** `%APPDATA%/Claude/claude_desktop_config.json`
+- **Claude Desktop (Mac):** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Cursor:** `.cursor/mcp.json` in your project root
 
-### vs bagsx-mcp (the only other Bags MCP server)
+### Option B: From source
 
-| Feature | bagsx-mcp | bags-sdk-mcp |
-|---------|-----------|-------------|
-| Tools | 19 | **40** |
-| MCP Resources | 0 | **4** |
-| MCP Prompts | 0 | **6** |
-| Tool annotations | No | **Yes** |
-| Agent API (6 endpoints) | No | **Yes** |
-| Dexscreener API (3 endpoints) | No | **Yes** |
-| Fee Share Admin (3 endpoints) | No | **Yes** |
-| Fee Config Composer | No | **Yes** |
-| Tiered caching (1k req/hr) | No | **Yes** |
-| Streamable HTTP transport | No | **Yes** |
-| Autonomous agent mode | No | **Yes** |
+```bash
+git clone https://github.com/outerheaven199X/bags-sdk-mcp.git
+cd bags-sdk-mcp
+cp .env.example .env       # add your BAGS_API_KEY
+npm install && npm run build
+npm start
+```
 
-### 40 Tools by Domain
+### Option C: HTTP transport (remote/serverless)
 
-| Domain | Tools | Description |
+```bash
+bags-sdk-mcp --http                  # port 3000
+bags-sdk-mcp --http --port=8080      # custom port
+```
+
+---
+
+## Launch a coin (step by step)
+
+Launching costs real SOL. The server returns unsigned transactions at every step so you review and sign each one before anything hits the chain.
+
+### Step 1 — Upload metadata
+
+Tell your agent the token name, symbol, description, and image URL.
+
+```
+"Create token info for a coin called BAGS SDK, symbol BSDK,
+ description 'The official Bags SDK hackathon coin',
+ image https://i.imgur.com/3fZ6VWG.png"
+```
+
+Tool called: `bags_create_token_info` — uploads metadata to IPFS, returns a `tokenMint` and `uri`.
+
+### Step 2 — Set up fee sharing
+
+Decide who earns trading fees and in what split. BPS must add up to 10000 (100%).
+
+```
+"Create a fee config: 100% to my wallet 83xQ...biH"
+```
+
+Tool called: `bags_create_fee_config` — returns unsigned transaction(s) and a `meteoraConfigKey`.
+
+**Sign and send the fee config transaction(s) first.**
+
+### Step 3 — Build the launch transaction
+
+```
+"Build the launch transaction with 0.1 SOL initial buy"
+```
+
+Tool called: `bags_create_launch_tx` — returns one more unsigned transaction.
+
+**Sign and send. Your coin is live.**
+
+### One-shot alternative
+
+If you want all three steps composed into a single call:
+
+```
+"Launch a token called BAGS SDK, symbol BSDK, 100% fees to my wallet,
+ 0.1 SOL initial buy"
+```
+
+Tool called: `bags_launch_token` — returns all unsigned transactions in signing order.
+
+You still sign each one individually.
+
+---
+
+## What's in the box
+
+### 40 tools
+
+| Domain | Tools | What they do |
 |--------|-------|-------------|
-| **Trading** | `bags_quote`, `bags_swap` | Price quotes and unsigned swap transactions |
-| **Launch** | `bags_launch_feed`, `bags_create_token_info`, `bags_create_launch_tx`, `bags_launch_token` | Full token launch lifecycle |
-| **Fees** | `bags_resolve_wallet`, `bags_resolve_wallets_bulk`, `bags_create_fee_config`, `bags_compose_fee_config`, `bags_fee_admin_list`, `bags_fee_admin_transfer`, `bags_fee_admin_update`, `bags_claim_events` | Fee sharing setup and management |
-| **Claiming** | `bags_claimable_positions`, `bags_claim_fees`, `bags_claim_all_fees` | Fee claiming with batch support |
-| **Partner** | `bags_partner_stats`, `bags_partner_claim`, `bags_partner_config` | Partner program integration |
-| **Dexscreener** | `bags_dexscreener_check`, `bags_dexscreener_order`, `bags_dexscreener_payment` | Dexscreener profile boosting |
-| **Agent Auth** | `bags_agent_auth_init`, `bags_agent_auth_login`, `bags_agent_wallet_list`, `bags_agent_wallet_export`, `bags_agent_keys_list`, `bags_agent_keys_create`, `bags_agent_bootstrap` | Agent lifecycle management |
-| **State** | `bags_pools`, `bags_pool`, `bags_pool_config_keys` | Pool and config queries |
-| **Analytics** | `bags_token_creators`, `bags_lifetime_fees`, `bags_claim_stats` | Token and fee analytics |
-| **Solana** | `bags_send_transaction`, `bags_wallet_balance`, `bags_token_holdings` | On-chain operations |
+| **Trading** | `quote`, `swap` | Price quotes, unsigned swap txs |
+| **Launch** | `launch_feed`, `create_token_info`, `create_launch_tx`, `launch_token` | Full token launch lifecycle |
+| **Fees** | `resolve_wallet`, `resolve_wallets_bulk`, `create_fee_config`, `compose_fee_config`, `fee_admin_list`, `fee_admin_transfer`, `fee_admin_update`, `claim_events` | Fee sharing setup and management |
+| **Claiming** | `claimable_positions`, `claim_fees`, `claim_all_fees` | Find and claim earned fees |
+| **Partner** | `partner_stats`, `partner_claim`, `partner_config` | Referral program |
+| **Dexscreener** | `dexscreener_check`, `dexscreener_order`, `dexscreener_payment` | Profile boosting |
+| **Agent Auth** | `agent_auth_init`, `agent_auth_login`, `agent_wallet_list`, `agent_wallet_export`, `agent_keys_list`, `agent_keys_create`, `agent_bootstrap` | Agent identity and wallet management |
+| **State** | `pools`, `pool`, `pool_config_keys` | Liquidity pool data |
+| **Analytics** | `token_creators`, `lifetime_fees`, `claim_stats`, `top_tokens` | On-chain analytics |
+| **Solana** | `send_transaction`, `wallet_balance`, `token_holdings` | RPC utilities |
 
-### 4 Resources
+All tool names are prefixed with `bags_`.
+
+### 4 resources
 
 | URI | Description |
 |-----|-------------|
 | `bags://launches` | Live token launch feed |
-| `bags://pools` | All active liquidity pools |
-| `bags://token/{mint}` | Composite token detail (pool + creators + fees) |
-| `bags://portfolio/{wallet}` | Claimable positions + earnings summary |
+| `bags://pools` | Active liquidity pools |
+| `bags://token/{mint}` | Token detail: pool + creators + fees |
+| `bags://portfolio/{wallet}` | Claimable positions + earnings |
 
-### 6 Prompts
+### 6 prompts
 
-| Prompt | Description |
-|--------|-------------|
-| `bags_launch_token` | Guided solo token launch |
-| `bags_launch_team_token` | Team launch with multi-party fee splits |
-| `bags_analyze_fees` | Fee earnings analysis |
-| `bags_setup_partner` | Partner config setup |
-| `bags_claim_all` | Batch fee claiming |
-| `bags_portfolio_overview` | Full position + earnings summary |
+Guided multi-step workflows: `launch_token`, `launch_team_token`, `analyze_fees`, `setup_partner`, `claim_all`, `portfolio_overview`.
 
-## Fee Config Composer
+---
 
-The flagship differentiator. Build complex fee splits without touching raw BPS arrays.
+## Fee config composer
+
+Build fee splits without doing BPS math by hand.
 
 ```typescript
-// Solo creator — 100% of fees
-FeeConfigBuilder.soloCreator("twitter", "nikki");
+// 100% to you
+FeeConfigBuilder.soloCreator("twitter", "yourhandle");
 
-// Creator + holder dividends — 50/50
-FeeConfigBuilder.creatorPlusDividends("twitter", "nikki", 5000);
+// 50/50 with holder dividends
+FeeConfigBuilder.creatorPlusDividends("twitter", "yourhandle", 5000);
 
-// Team split — even across all members
+// Even split across a team
 FeeConfigBuilder.teamSplit([
   { provider: "twitter", username: "alice" },
   { provider: "twitter", username: "bob" },
   { provider: "twitter", username: "carol" },
 ]);
-
-// Influencer launch — creator 30%, influencers 50%, dividends 20%
-FeeConfigBuilder.influencerLaunch(
-  { provider: "twitter", username: "nikki" },
-  [
-    { provider: "twitter", username: "influencer1" },
-    { provider: "twitter", username: "influencer2" },
-  ],
-  { creatorBps: 3000, dividendsBps: 2000 }
-);
 ```
 
-Exposed as both a TypeScript class and the `bags_compose_fee_config` MCP tool.
+Also available as the `bags_compose_fee_config` tool for preview before committing on-chain.
 
-## Zero-Custody Architecture
+---
 
-BagsSDK never touches private keys. Every transaction-generating tool returns unsigned base64-encoded `VersionedTransaction` objects. You sign externally with Phantom, Solflare, or Backpack.
+## Agent mode
 
-## Agent Mode
-
-Optional autonomous operation with dual-model orchestration:
+Autonomous strategies with dual-model routing.
 
 ```bash
-# Auto-claim fees when above threshold
-bags-sdk-mcp --agent --auto-claim
-
-# Monitor launch feed for matching criteria
-bags-sdk-mcp --agent --monitor
-
-# Both strategies concurrently
-bags-sdk-mcp --agent --auto-claim --monitor
+bags-sdk-mcp --agent --auto-claim     # claim fees above threshold every 5 min
+bags-sdk-mcp --agent --monitor        # watch launch feed, flag interesting ones
+bags-sdk-mcp --agent --auto-claim --monitor   # both
 ```
 
-**Hermes 4** (via Nous API) handles fast routine operations: checking positions, claiming fees, monitoring feeds.
+Requires `NOUS_API_KEY` (Hermes 4 for fast ops) and `ANTHROPIC_API_KEY` (Sonnet for strategy).
 
-**Claude Sonnet** (via Anthropic API) handles strategic decisions: evaluating launches, composing fee configs, generating analysis reports.
+---
 
-## Transports
-
-```bash
-# stdio (default, for Claude Desktop)
-bags-sdk-mcp
-
-# Streamable HTTP (for remote connections)
-bags-sdk-mcp --http
-bags-sdk-mcp --http --port=8080
-```
-
-## Environment Variables
+## Environment variables
 
 ```env
 # Required
-BAGS_API_KEY=                    # From dev.bags.fm
+BAGS_API_KEY=                    # from dev.bags.fm
 
 # Optional
-SOLANA_RPC_URL=                  # Default: mainnet-beta (Helius recommended)
-HELIUS_API_KEY=                  # Richer on-chain data
+SOLANA_RPC_URL=                  # default: mainnet-beta
+BAGS_API_BASE=                   # default: https://public-api-v2.bags.fm/api/v1
 
-# Agent mode only
-NOUS_API_KEY=                    # Hermes 4 for fast decisions
-ANTHROPIC_API_KEY=               # Sonnet for strategic decisions
-AGENT_WALLET_PUBKEY=             # Read-only wallet for agent operations
+# Agent mode
+NOUS_API_KEY=                    # Hermes 4
+ANTHROPIC_API_KEY=               # Claude Sonnet
+AGENT_WALLET_PUBKEY=             # read-only wallet for agent ops
 ```
 
-## Demo
+The server loads `.env` from your working directory automatically.
 
-One natural language sentence → 6+ tool calls → team token launched with multi-party fee splits.
+---
 
-> "Launch a token called BAGS SDK with symbol BSDK. Split fees: 70% to me (@nikki on twitter), 20% to @alice on twitter, 10% to @DividendsBot. Buy 0.1 SOL on launch."
+## Security
 
-Claude executes: `bags_resolve_wallet` ×3 → `bags_compose_fee_config` → `bags_create_token_info` → `bags_create_fee_config` → `bags_create_launch_tx` → `bags_dexscreener_check`
+No private keys pass through this server. Every transaction-generating tool returns unsigned base64. You sign with your own wallet (Phantom, Solflare, Backpack) and broadcast with `bags_send_transaction`.
 
-Returns all unsigned transactions. You sign. Token is live.
+---
 
 ## Development
 
 ```bash
-git clone https://github.com/antimeme/bags-sdk-mcp
-cd bags-sdk-mcp
-npm install
-npm run build
-npm run inspect    # Open MCP Inspector
+npm run build          # compile TypeScript
+npm run dev            # watch mode
+npm run inspect        # open MCP Inspector
+npm test               # run tests
 ```
 
 ## License

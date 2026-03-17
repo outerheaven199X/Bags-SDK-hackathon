@@ -14,13 +14,15 @@ const DEFAULT_PORT = 3000;
  */
 export async function startHttp(port?: number): Promise<void> {
   const listenPort = port ?? (Number(process.env.PORT) || DEFAULT_PORT);
+
+  const server = createServer();
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  await server.connect(transport);
+
   const app = express();
   app.use(express.json());
 
   app.post("/mcp", async (req, res) => {
-    const server = createServer();
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   });
 

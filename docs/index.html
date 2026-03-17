@@ -262,7 +262,7 @@ npm run build</code></pre>
       <tr><td><code>BAGS_API_KEY</code></td><td>Yes</td><td>API key from dev.bags.fm</td></tr>
       <tr><td><code>BAGS_API_BASE</code></td><td>No</td><td>Override API base URL (default: <code>https://public-api-v2.bags.fm/api/v1</code>)</td></tr>
       <tr><td><code>SOLANA_RPC_URL</code></td><td>No</td><td>Solana RPC endpoint (default: mainnet-beta). Helius recommended.</td></tr>
-      <tr><td><code>HELIUS_API_KEY</code></td><td>No</td><td>Enables richer on-chain data</td></tr>
+      <tr><td><code>PORT</code></td><td>No</td><td>HTTP transport port (default: 3000)</td></tr>
       <tr><td><code>NOUS_API_KEY</code></td><td>Agent mode</td><td>Hermes 4 API key for fast routine decisions</td></tr>
       <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Agent mode</td><td>Claude Sonnet API key for strategic decisions</td></tr>
       <tr><td><code>AGENT_WALLET_PUBKEY</code></td><td>Agent mode</td><td>Base58 wallet address for agent operations (read-only)</td></tr>
@@ -424,7 +424,7 @@ npm run build</code></pre>
 
   <div class="callout callout-danger">
     <strong>🔒 Security guarantee</strong>
-    No private key, seed phrase, or signing capability ever passes through this server. The <code>bags_agent_wallet_export</code> tool only exports public key information.
+    No private key, seed phrase, or signing capability ever passes through this server for standard operations. The <code>bags_agent_wallet_export</code> tool (agent mode only) can export agent wallet keys — handle with extreme care.
   </div>
 </div>
 
@@ -573,13 +573,13 @@ npm run build</code></pre>
   <div class="tool-card">
     <h4>bags_fee_admin_transfer</h4>
     <p class="desc">Transfer fee share admin rights to another wallet. Irreversible.</p>
-    <p class="meta">Inputs: currentAdmin, newAdmin, configKey</p>
+    <p class="meta">Inputs: baseMint, currentAdmin, newAdmin, payer</p>
   </div>
 
   <div class="tool-card">
     <h4>bags_fee_admin_update</h4>
     <p class="desc">Update claimers and BPS on an existing fee config.</p>
-    <p class="meta">Inputs: admin, configKey, claimersArray, basisPointsArray</p>
+    <p class="meta">Inputs: baseMint, payer, claimersArray, basisPointsArray, additionalLookupTables?</p>
   </div>
 
   <div class="tool-card">
@@ -673,40 +673,40 @@ npm run build</code></pre>
 
   <div class="tool-card">
     <h4>bags_agent_auth_init</h4>
-    <p class="desc">Step 1: Start the agent authentication flow.</p>
-    <p class="meta">Inputs: email?, provider? (at least one required)</p>
-    <p class="meta">Returns: auth token + verification instructions</p>
+    <p class="desc">Step 1: Start the agent authentication flow via Moltbook.</p>
+    <p class="meta">Inputs: agentUsername</p>
+    <p class="meta">Returns: publicIdentifier, secret, verificationPostContent</p>
   </div>
 
   <div class="tool-card">
     <h4>bags_agent_auth_login</h4>
-    <p class="desc">Step 2: Complete authentication with verification code.</p>
-    <p class="meta">Inputs: token (from auth_init), code?</p>
-    <p class="meta">Returns: session credentials</p>
+    <p class="desc">Step 2: Complete authentication by verifying the Moltbook post.</p>
+    <p class="meta">Inputs: publicIdentifier, secret, postId</p>
+    <p class="meta">Returns: JWT (valid 365 days)</p>
   </div>
 
   <div class="tool-card">
     <h4>bags_agent_wallet_list</h4>
     <p class="desc">List all wallets associated with authenticated agent.</p>
-    <p class="meta">Inputs: none</p>
+    <p class="meta">Inputs: token (JWT)</p>
   </div>
 
   <div class="tool-card">
     <h4>bags_agent_wallet_export</h4>
-    <p class="desc">Export public key details for a wallet. Never exposes private keys.</p>
-    <p class="meta">Inputs: walletId</p>
+    <p class="desc">Export a wallet's private key. Handle with extreme care.</p>
+    <p class="meta">Inputs: token (JWT), walletAddress</p>
   </div>
 
   <div class="tool-card">
     <h4>bags_agent_keys_list</h4>
     <p class="desc">List all API keys for the authenticated agent.</p>
-    <p class="meta">Inputs: none</p>
+    <p class="meta">Inputs: token (JWT)</p>
   </div>
 
   <div class="tool-card">
     <h4>bags_agent_keys_create</h4>
     <p class="desc">Create a new API key. Shown once — save it immediately.</p>
-    <p class="meta">Inputs: name? (optional label)</p>
+    <p class="meta">Inputs: token (JWT), name</p>
   </div>
 
   <div class="tool-card">
@@ -767,7 +767,7 @@ npm run build</code></pre>
     <p class="desc">Aggregate claim statistics for a wallet or token.</p>
     <p class="meta">Inputs: walletAddress?, tokenMint? (at least one required)</p>
     <p class="meta">Returns: total claimed, total unclaimed, claim count</p>
-    <p class="meta">REST: /fee-share/claim-stats</p>
+    <p class="meta">REST: /token-launch/claim-stats</p>
   </div>
 
   <div class="tool-card">
@@ -1122,7 +1122,7 @@ bags-sdk-mcp --http --port=8080      # Custom port</code></pre>
     </tbody>
   </table>
 
-  <p>Each request creates a fresh server + transport pair (stateless). This makes it suitable for serverless deployments or load-balanced environments.</p>
+  <p>A single server instance is shared across all requests with in-memory state and caching preserved.</p>
 </div>
 
 <!-- ════════════════════════════════════ CLI REFERENCE ════════════════════════════════════ -->

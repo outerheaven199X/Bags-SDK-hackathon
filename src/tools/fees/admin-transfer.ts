@@ -7,9 +7,10 @@ import { bagsPost } from "../../client/bags-rest.js";
 import { mcpError } from "../../utils/errors.js";
 
 const inputSchema = {
+  baseMint: z.string().describe("Base58 token mint address"),
   currentAdmin: z.string().describe("Current admin's Base58 wallet address"),
   newAdmin: z.string().describe("New admin's Base58 wallet address"),
-  configKey: z.string().describe("Fee share config key to transfer"),
+  payer: z.string().describe("Transaction payer's Base58 wallet address"),
 };
 
 /**
@@ -21,28 +22,28 @@ export function registerFeeAdminTransfer(server: McpServer) {
     "bags_fee_admin_transfer",
     "Transfer fee share admin rights to a different wallet. Returns an unsigned transaction. This is irreversible — the new admin will control the fee config.",
     inputSchema,
-    async ({ currentAdmin, newAdmin, configKey }) => {
+    async ({ baseMint, currentAdmin, newAdmin, payer }) => {
       try {
-        const result = await bagsPost<{ transaction: string }>("/fee-share/admin/transfer", {
+        const result = await bagsPost<{ transaction: string; blockhash: unknown }>("/fee-share/admin/transfer-tx", {
+          baseMint,
           currentAdmin,
           newAdmin,
-          configKey,
+          payer,
         });
 
         if (!result.success) {
           return mcpError(new Error(result.error ?? "Failed to create admin transfer transaction"));
         }
 
-        const output = {
-          configKey,
-          from: currentAdmin,
-          to: newAdmin,
-          unsignedTransaction: result.response!.transaction,
-          warning: "This is irreversible. The new admin will control this fee share config.",
-        };
-
         return {
-          content: [{ type: "text" as const, text: JSON.stringify(output, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify({
+            baseMint,
+            from: currentAdmin,
+            to: newAdmin,
+            payer,
+            unsignedTransaction: result.response!.transaction,
+            warning: "This is irreversible. The new admin will control this fee share config.",
+          }, null, 2) }],
         };
       } catch (error) {
         return mcpError(error);
