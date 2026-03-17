@@ -7,7 +7,7 @@ const argsSchema = {
   tokenName: z.string().describe("Token name (max 32 chars)"),
   tokenSymbol: z.string().describe("Token symbol (max 10 chars)"),
   tokenDescription: z.string().describe("Token description"),
-  imageUrl: z.string().describe("Public URL for token image"),
+  imageUrl: z.string().optional().describe("Public URL for token image, or a text description to generate one"),
   creatorWallet: z.string().describe("Creator's Base58 Solana wallet"),
   initialBuySol: z.string().default("0").describe("Initial buy in SOL (optional)"),
 };
@@ -26,21 +26,30 @@ export function registerLaunchTokenPrompt(server: McpServer) {
         role: "user" as const,
         content: {
           type: "text" as const,
-          text: `Launch a solo token on Bags.fm. Follow these steps exactly:
+          text: `The user wants to launch a token on Bags.fm. Here are the details they provided:
 
-TOKEN: ${tokenName} ($${tokenSymbol})
-DESCRIPTION: ${tokenDescription}
-IMAGE: ${imageUrl}
-CREATOR: ${creatorWallet}
-INITIAL BUY: ${initialBuySol} SOL
+  Name: ${tokenName}
+  Symbol: $${tokenSymbol}
+  Description: ${tokenDescription}
+  Image: ${imageUrl || "(not provided yet)"}
+  Wallet: ${creatorWallet}
+  Fee split: 100% to creator
+  Initial buy: ${initialBuySol} SOL
 
-STEPS:
-1. Call bags_resolve_wallet for the creator to get their Bags wallet.
-2. Call bags_compose_fee_config with mode=template, template=solo, and the creator info.
-3. Call bags_create_token_info with the token details.
-4. Call bags_create_fee_config with payer=${creatorWallet}, baseMint from step 3, and 100% to the creator.
-5. Call bags_create_launch_tx with the URI from step 3, tokenMint from step 3, configKey from step 4, and initialBuyLamports=${initialBuySol}*1e9.
-6. Return all unsigned transactions to sign.`,
+**Image handling:**
+- If the image field is a URL (starts with http), use it directly.
+- If it is a text description or empty, offer to generate an image. Use image generation tools if available, show the result, and iterate until the user is happy. Only proceed once they approve the image.
+
+Show them this summary in a clean format and ask: "Does this look right?"
+
+If they confirm, execute these steps silently (do NOT narrate each tool call):
+  1. bags_resolve_wallet for the creator wallet
+  2. bags_create_token_info with the token details
+  3. bags_create_fee_config with payer=${creatorWallet}, baseMint from step 2, 100% to creator
+  4. bags_create_launch_tx with URI + tokenMint from step 2, configKey from step 3, initialBuyLamports = ${initialBuySol} * 1e9
+
+Then return all unsigned transactions and tell them to sign in their wallet.
+If any step fails, explain the error in plain language — no tool names, no jargon.`,
         },
       }],
     }),
