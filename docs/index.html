@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BagsSDK MCP — Documentation</title>
-<meta name="description" content="Batteries-included MCP server for the Bags.fm API. 40 tools, 4 resources, 6 prompts, fee-config composer, tiered caching, and autonomous agent mode.">
+<meta name="description" content="Launch a coin in 3 steps from your terminal. 41 MCP tools for trading, launching, fee splits, claims, Dexscreener, and agent auth on Bags.fm.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -121,7 +121,7 @@ tr:hover td{background:#f9fafb}
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <h1>📦 BagsSDK <span class="badge">MCP</span></h1>
-    <p>Bags.fm API for AI Agents</p>
+    <p>Launch coins from your terminal</p>
   </div>
 
   <div class="search-box">
@@ -156,6 +156,8 @@ tr:hover td{background:#f9fafb}
     <a class="nav-link" href="#" data-section="tools-state">State (3)</a>
     <a class="nav-link" href="#" data-section="tools-analytics">Analytics (4)</a>
     <a class="nav-link" href="#" data-section="tools-solana">Solana (3)</a>
+    <a class="nav-link" href="#" data-section="tools-signing">Signing (2)</a>
+    <a class="nav-link" href="#" data-section="tools-meta">Meta (1)</a>
   </div>
 
   <div class="nav-group">
@@ -191,9 +193,9 @@ tr:hover td{background:#f9fafb}
 <div class="section active" id="introduction">
   <div class="hero">
     <h1>BagsSDK MCP Server</h1>
-    <p class="subtitle">The batteries-included MCP server that gives AI agents full access to the Bags.fm API.</p>
+    <p class="subtitle">Launch a coin in 3 steps from your terminal. 41 MCP tools. Fee splits, claims, Dexscreener, agent auth. Your AI handles the rest.</p>
     <div class="hero-badges">
-      <span class="badge-blue">40 Tools</span>
+      <span class="badge-blue">41 Tools</span>
       <span class="badge-green">4 Resources</span>
       <span class="badge-purple">6 Prompts</span>
       <span class="badge-amber">Agent Mode</span>
@@ -205,7 +207,7 @@ tr:hover td{background:#f9fafb}
 
   <h3>Key Features</h3>
   <ul>
-    <li><strong>40 MCP tools</strong> — trading, token launches, fee management, claiming, analytics, Dexscreener, and more</li>
+    <li><strong>41 MCP tools</strong> — trading, token launches, fee management, claiming, analytics, Dexscreener, and more</li>
     <li><strong>Fee Config Composer</strong> — fluent builder for multi-party fee splits without raw BPS math</li>
     <li><strong>Tiered caching</strong> — 5-level TTL cache to stay within the 1,000 req/hr rate limit</li>
     <li><strong>Zero-custody</strong> — no private keys stored; all transactions returned unsigned as base64</li>
@@ -242,8 +244,8 @@ tr:hover td{background:#f9fafb}
   <pre><code>npm install -g bags-sdk-mcp</code></pre>
 
   <h3>Install from source</h3>
-  <pre><code>git clone https://github.com/npittman/bags-sdk-mcp.git
-cd bags-sdk-mcp
+  <pre><code>git clone https://github.com/outerheaven199X/Bags-SDK-hackathon.git
+cd Bags-SDK-hackathon
 npm install
 npm run build</code></pre>
 
@@ -304,7 +306,7 @@ npm run build</code></pre>
   }
 }</code></pre>
 
-  <p>After adding the config, restart the application. The 40 tools, 4 resources, and 6 prompts will appear automatically.</p>
+  <p>After adding the config, restart the application. The 41 tools, 4 resources, and 6 prompts will appear automatically.</p>
 </div>
 
 <!-- ════════════════════════════════════ QUICKSTART ════════════════════════════════════ -->
@@ -350,7 +352,7 @@ npm run build</code></pre>
 │   │   ├── bags-rest.ts      # Direct REST client for undocumented endpoints
 │   │   ├── cache.ts          # Tiered TTL cache (5 levels)
 │   │   └── types.ts          # TypeScript types for API responses
-│   ├── tools/                # 40 MCP tools organized by domain
+│   ├── tools/                # 41 MCP tools organized by domain
 │   │   ├── trading/          # quote, swap
 │   │   ├── launch/           # feed, create-info, create-tx, launch-full
 │   │   ├── fees/             # resolve-wallet, resolve-bulk, create-config, compose, ...
@@ -361,7 +363,8 @@ npm run build</code></pre>
 │   │   ├── state/            # pools, pool, pool-config
 │   │   ├── analytics/        # creators, lifetime-fees, claim-stats, top-tokens
 │   │   ├── solana/           # send-tx, balance, holdings
-│   │   └── _registry.ts      # Imports and registers all 40 tools
+│   │   ├── signing/          # signing-page, launch-page
+│   │   └── _registry.ts      # Imports and registers all 41 tools
 │   ├── resources/            # 4 MCP resources
 │   ├── prompts/              # 6 MCP prompts
 │   ├── composer/             # Fee Config Builder + templates + validator
@@ -802,6 +805,44 @@ npm run build</code></pre>
     <p class="desc">List all SPL token holdings for a wallet. Filters to non-zero balances.</p>
     <p class="meta">Inputs: walletAddress</p>
     <p class="meta">Returns: array of {mint, amount, decimals, uiAmount}</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ TOOLS: SIGNING ════════════════════════════════════ -->
+<div class="section" id="tools-signing">
+  <h2>Signing Tools</h2>
+
+  <div class="tool-card">
+    <h4>bags_open_signing_page</h4>
+    <p class="desc">Open a local wallet-connect signing page for pre-built transactions (swaps, claims, etc.).</p>
+    <p class="meta">Inputs: transactions (base64[]), metadata (description, details)</p>
+    <p class="meta">Returns: localhost URL to open in browser. Connect wallet, sign, done.</p>
+    <p class="meta">Server: localhost:3141 (bound to 127.0.0.1 only)</p>
+  </div>
+
+  <div class="tool-card">
+    <h4>bags_open_launch_page</h4>
+    <p class="desc">Open a local launch page that handles the full two-phase signing flow: fee config + launch transaction. No wallet address needed in chat — the page detects and connects your browser wallet.</p>
+    <p class="meta">Inputs: tokenMint, uri, claimersArray, basisPointsArray, initialBuySol, description, meta</p>
+    <p class="meta">Returns: localhost URL with three-phase flow (Connect → Fee Setup → Launch)</p>
+    <p class="meta">Server: localhost:3141 (bound to 127.0.0.1 only)</p>
+  </div>
+
+  <div class="callout callout-tip">
+    <strong>💡 Launch page vs signing page</strong>
+    Use <code>open_launch_page</code> for token launches (handles both fee config and launch in one session). Use <code>open_signing_page</code> for everything else (swaps, claims, fee admin operations).
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ TOOLS: META ════════════════════════════════════ -->
+<div class="section" id="tools-meta">
+  <h2>Meta Tools</h2>
+
+  <div class="tool-card">
+    <h4>bags_tool_catalog</h4>
+    <p class="desc">List all available Bags SDK MCP tools with descriptions and parameter info. Useful for discovery and debugging.</p>
+    <p class="meta">Inputs: none</p>
+    <p class="meta">Returns: array of all registered tools with names, descriptions, and input schemas</p>
   </div>
 </div>
 

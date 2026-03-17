@@ -1,19 +1,23 @@
-# bags-sdk-mcp
+<h1 align="center">Bags SDK — MCP Server</h1>
 
-Connect Bags.fm to any MCP-compatible AI agent. Launch coins, browse trends, trade, and manage fees from your terminal or any AI client.
+<p align="center">
+  Launch a coin in 3 steps from your terminal.<br/>
+  41 MCP tools. Fee splits, claims, Dexscreener, agent auth.<br/>
+  Your AI handles the rest.
+</p>
 
-[![npm](https://img.shields.io/npm/v/bags-sdk-mcp)](https://www.npmjs.com/package/bags-sdk-mcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://www.npmjs.com/package/bags-sdk-mcp"><img src="https://img.shields.io/npm/v/bags-sdk-mcp?style=flat-square&color=00ff41" alt="npm" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00ff41?style=flat-square" alt="MIT" /></a>
+  <a href="https://dev.bags.fm"><img src="https://img.shields.io/badge/API_Key-dev.bags.fm-00ff41?style=flat-square" alt="API Key" /></a>
+</p>
 
 ---
 
-## Get started
+## Setup
 
-**You need one thing:** a Bags API key from [dev.bags.fm](https://dev.bags.fm).
-
-### Option A: Claude Desktop / Cursor
-
-Add this to your MCP config:
+1. Get an API key from [dev.bags.fm](https://dev.bags.fm)
+2. Add this to your MCP config:
 
 ```json
 {
@@ -30,102 +34,93 @@ Add this to your MCP config:
 }
 ```
 
-Config file locations:
-- **Claude Desktop (Windows):** `%APPDATA%/Claude/claude_desktop_config.json`
-- **Claude Desktop (Mac):** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Cursor:** `.cursor/mcp.json` in your project root
+3. Restart your client. Done.
 
-### Option B: From source
+<details>
+<summary>Config file locations</summary>
+
+| Client | Path |
+|--------|------|
+| Claude Desktop (Windows) | `%APPDATA%/Claude/claude_desktop_config.json` |
+| Claude Desktop (Mac) | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Cursor | `.cursor/mcp.json` in project root |
+| Claude Code | `.mcp.json` in project root |
+
+</details>
+
+<details>
+<summary>From source</summary>
 
 ```bash
-git clone https://github.com/outerheaven199X/bags-sdk-mcp.git
-cd bags-sdk-mcp
+git clone https://github.com/outerheaven199X/Bags-SDK-hackathon.git
+cd Bags-SDK-hackathon
 cp .env.example .env       # add your BAGS_API_KEY
 npm install && npm run build
 npm start
 ```
 
-### Option C: HTTP transport (remote/serverless)
+</details>
+
+<details>
+<summary>HTTP transport</summary>
 
 ```bash
 bags-sdk-mcp --http                  # port 3000
 bags-sdk-mcp --http --port=8080      # custom port
 ```
 
----
-
-## Launch a coin
-
-Launching costs real SOL. You confirm everything before a single transaction hits the chain.
-
-### How it works
-
-1. **Tell your agent what you want.** Name, symbol, description, image, wallet, fee split, initial buy amount.
-2. **Review the summary.** The agent shows you everything and asks for confirmation before calling any tools.
-3. **Sign the fee setup.** The agent opens a local signing page — click "Connect Wallet", your wallet pops up, approve. No copy-pasting raw transactions.
-4. **Sign the launch.** Same flow. One more signature and your coin is live.
-
-That's it. Confirm, sign, sign, live.
-
-### Wallet signing
-
-The server includes a built-in signing page that runs on localhost. When it's time to sign, you get a link. Click it, connect your wallet (Phantom, Solflare, Backpack, Coinbase — whatever you have installed), and approve. The page handles everything: deserialization, signing, broadcasting, and confirmation.
-
-No raw transactions. No clipboard. No jargon.
+</details>
 
 ---
 
-## Browse what's trending
+## Launch a Coin
 
-Not just a launch tool — you can explore the Bags.fm ecosystem:
+```
+You:    "Launch a coin called bori, symbol BOOL, 0.001 SOL initial buy"
+Agent:  shows summary, asks for confirmation
+You:    "Go"
+Agent:  opens signing page → connect wallet → sign twice → live
+```
 
-- **Recent launches** — see what just went live
-- **Top tokens** — leaderboard by volume or fees earned
-- **Wallet portfolio** — check any wallet's holdings and claimable fees
-- **Token details** — pool data, creator info, fee configs for any token
-
-Just ask your agent: "What's trending on Bags?" or "Show me the top tokens this week."
-
----
-
-## What's in the box
-
-### 41 tools
-
-| Domain | Tools | What they do |
-|--------|-------|-------------|
-| **Trading** | `quote`, `swap` | Price quotes, unsigned swap txs |
-| **Launch** | `launch_feed`, `create_token_info`, `create_launch_tx`, `launch_token` | Full token launch lifecycle |
-| **Fees** | `resolve_wallet`, `resolve_wallets_bulk`, `create_fee_config`, `compose_fee_config`, `fee_admin_list`, `fee_admin_transfer`, `fee_admin_update`, `claim_events` | Fee sharing setup and management |
-| **Claiming** | `claimable_positions`, `claim_fees`, `claim_all_fees` | Find and claim earned fees |
-| **Partner** | `partner_stats`, `partner_claim`, `partner_config` | Referral program |
-| **Dexscreener** | `dexscreener_check`, `dexscreener_order`, `dexscreener_payment` | Profile boosting |
-| **Agent Auth** | `agent_auth_init`, `agent_auth_login`, `agent_wallet_list`, `agent_wallet_export`, `agent_keys_list`, `agent_keys_create`, `agent_bootstrap` | Agent identity and wallet management |
-| **State** | `pools`, `pool`, `pool_config_keys` | Liquidity pool data |
-| **Analytics** | `token_creators`, `lifetime_fees`, `claim_stats`, `top_tokens` | On-chain analytics |
-| **Solana** | `send_transaction`, `wallet_balance`, `token_holdings` | RPC utilities |
-| **Signing** | `open_signing_page` | Local wallet-connect signing page |
-
-All tool names are prefixed with `bags_`.
-
-### 4 resources
-
-| URI | Description |
-|-----|-------------|
-| `bags://launches` | Live token launch feed |
-| `bags://pools` | Active liquidity pools |
-| `bags://token/{mint}` | Token detail: pool + creators + fees |
-| `bags://portfolio/{wallet}` | Claimable positions + earnings |
-
-### 6 prompts
-
-Guided multi-step workflows: `launch_token`, `launch_team_token`, `analyze_fees`, `setup_partner`, `claim_all`, `portfolio_overview`.
+That's it. The signing page runs on localhost — connect Phantom, Solflare, Backpack, or Coinbase, approve two transactions, and your coin is on-chain. No raw transactions, no clipboard, no jargon.
 
 ---
 
-## Fee config composer
+## What Else Can It Do
 
-Build fee splits without doing BPS math by hand.
+| Say this | Get this |
+|----------|----------|
+| "What's trending on Bags?" | Recent launches + top tokens |
+| "Check my wallet" | Balance, holdings, claimable fees |
+| "Claim all my fees" | Finds and claims every open position |
+| "Set up a 50/50 fee split" | Fee config built and signed |
+| "List on Dexscreener" | Profile boost order placed |
+| "Show pool data for $TOKEN" | Reserves, config, migration status |
+
+---
+
+## 41 Tools
+
+| Domain | Tools |
+|--------|-------|
+| **Trading** | `quote` `swap` |
+| **Launch** | `launch_feed` `create_token_info` `create_launch_tx` `launch_token` |
+| **Fees** | `resolve_wallet` `resolve_wallets_bulk` `create_fee_config` `compose_fee_config` `fee_admin_list` `fee_admin_transfer` `fee_admin_update` `claim_events` |
+| **Claiming** | `claimable_positions` `claim_fees` `claim_all_fees` |
+| **Partner** | `partner_stats` `partner_claim` `partner_config` |
+| **Dexscreener** | `dexscreener_check` `dexscreener_order` `dexscreener_payment` |
+| **Agent Auth** | `agent_auth_init` `agent_auth_login` `agent_wallet_list` `agent_wallet_export` `agent_keys_list` `agent_keys_create` `agent_bootstrap` |
+| **State** | `pools` `pool` `pool_config_keys` |
+| **Analytics** | `token_creators` `lifetime_fees` `claim_stats` `top_tokens` |
+| **Solana** | `send_transaction` `wallet_balance` `token_holdings` |
+| **Signing** | `open_signing_page` `open_launch_page` |
+| **Meta** | `tool_catalog` |
+
+All prefixed with `bags_`.
+
+---
+
+## Fee Splits Without Math
 
 ```typescript
 // 100% to you
@@ -142,60 +137,52 @@ FeeConfigBuilder.teamSplit([
 ]);
 ```
 
-Also available as the `bags_compose_fee_config` tool for preview before committing on-chain.
+Or use the `bags_compose_fee_config` tool and preview before committing on-chain.
 
 ---
 
-## Agent mode
-
-Autonomous strategies with dual-model routing.
+## Agent Mode
 
 ```bash
-bags-sdk-mcp --agent --auto-claim     # claim fees above threshold every 5 min
-bags-sdk-mcp --agent --monitor        # watch launch feed, flag interesting ones
-bags-sdk-mcp --agent --auto-claim --monitor   # both
+bags-sdk-mcp --agent --auto-claim      # claim fees every 5 min
+bags-sdk-mcp --agent --monitor         # watch launches, flag interesting ones
+bags-sdk-mcp --agent --auto-claim --monitor
 ```
 
-Requires `NOUS_API_KEY` (Hermes 4 for fast ops) and `ANTHROPIC_API_KEY` (Sonnet for strategy).
-
----
-
-## Environment variables
-
-```env
-# Required
-BAGS_API_KEY=                    # from dev.bags.fm
-
-# Optional — the public RPC works for browsing and quotes.
-# A private RPC (Helius free tier recommended) avoids rate limits on transaction sends.
-SOLANA_RPC_URL=                  # default: mainnet-beta
-BAGS_API_BASE=                   # default: https://public-api-v2.bags.fm/api/v1
-
-# Agent mode
-NOUS_API_KEY=                    # Hermes 4
-ANTHROPIC_API_KEY=               # Claude Sonnet
-AGENT_WALLET_PUBKEY=             # read-only wallet for agent ops
-```
-
-The server loads `.env` from your working directory automatically.
+Requires `NOUS_API_KEY` and `ANTHROPIC_API_KEY`.
 
 ---
 
 ## Security
 
-No private keys pass through this server. Every transaction-generating tool returns unsigned data. The built-in signing page connects directly to your browser wallet — keys never leave your device.
+No private keys pass through this server. Every tool returns unsigned transaction data. The signing page connects directly to your browser wallet — keys never leave your device.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default |
+|----------|----------|---------|
+| `BAGS_API_KEY` | Yes | — |
+| `SOLANA_RPC_URL` | No | `mainnet-beta` |
+| `BAGS_API_BASE` | No | `https://public-api-v2.bags.fm/api/v1` |
+| `NOUS_API_KEY` | Agent mode | — |
+| `ANTHROPIC_API_KEY` | Agent mode | — |
+| `AGENT_WALLET_PUBKEY` | Agent mode | — |
+
+Loaded from `.env` automatically.
 
 ---
 
 ## Development
 
 ```bash
-npm run build          # compile TypeScript
+npm run build          # compile
 npm run dev            # watch mode
-npm run inspect        # open MCP Inspector
-npm test               # run tests
+npm run inspect        # MCP Inspector
+npm test               # tests
 ```
 
-## License
+---
 
-MIT
+<p align="center"><sub>MIT License</sub></p>
