@@ -720,7 +720,7 @@
       return preSigned;
     }
 
-    /** Fetch a fresh blockhash from RPC. Used only for txs without partial signatures. */
+    /** Fetch a fresh blockhash + lastValidBlockHeight from RPC. */
     async function getLatestBlockhash() {
       var bhRes = await fetch(rpcUrl, {
         method: "POST",
@@ -733,7 +733,79 @@
       });
       var bhData = await bhRes.json();
       if (bhData.error) throw new Error("Failed to get blockhash: " + bhData.error.message);
-      return bhData.result.value.blockhash;
+      return bhData.result.value;
+    }
+
+    /** Get the current block height from RPC. */
+    async function getBlockHeight() {
+      var res = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1,
+          method: "getBlockHeight",
+          params: [{ commitment: "confirmed" }],
+        }),
+      });
+      var data = await res.json();
+      return data.result;
+    }
+
+    /**
+     * Confirm a transaction with retry — resends every 2s until the blockhash expires.
+     * Falls back to signature status polling so we never hit an arbitrary 30s wall.
+     * @param {string} sig - Transaction signature.
+     * @param {Uint8Array} rawTx - Serialized signed transaction (for resends).
+     * @param {object} blockhashInfo - { blockhash, lastValidBlockHeight }.
+     * @param {object} connection - Solana Connection instance.
+     * @param {function} onStatus - Callback for status updates shown to user.
+     */
+    async function confirmWithRetry(sig, rawTx, blockhashInfo, connection, onStatus) {
+      var POLL_MS = 2000;
+      var MAX_RESENDS = 5;
+      var resendCount = 0;
+
+      while (true) {
+        var currentHeight = await getBlockHeight();
+        if (currentHeight > blockhashInfo.lastValidBlockHeight) {
+          throw new Error(
+            "Transaction expired (blockhash no longer valid). Please retry — this usually means network congestion."
+          );
+        }
+
+        var statusRes = await fetch(rpcUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0", id: 1,
+            method: "getSignatureStatuses",
+            params: [[sig], { searchTransactionHistory: true }],
+          }),
+        });
+        var statusData = await statusRes.json();
+        var value = statusData.result && statusData.result.value && statusData.result.value[0];
+
+        if (value) {
+          if (value.err) {
+            throw new Error("Transaction failed on-chain: " + JSON.stringify(value.err));
+          }
+          if (value.confirmationStatus === "confirmed" || value.confirmationStatus === "finalized") {
+            return sig;
+          }
+        }
+
+        if (resendCount < MAX_RESENDS) {
+          resendCount++;
+          if (onStatus) onStatus("Confirming... (resend " + resendCount + "/" + MAX_RESENDS + ")");
+          try {
+            await connection.sendRawTransaction(rawTx, { skipPreflight: true });
+          } catch (_e) { /* resend is best-effort */ }
+        } else {
+          if (onStatus) onStatus("Confirming... waiting for network");
+        }
+
+        await new Promise(function(r) { setTimeout(r, POLL_MS); });
+      }
     }
 
     /** Sign and send all current transactions, then advance to next phase. */
@@ -771,8 +843,8 @@
                 vtx.signatures[preSigned[p].index] = new Uint8Array(64);
               }
             } else {
-              var freshBh = await getLatestBlockhash();
-              vtx.message.recentBlockhash = freshBh;
+              var bhInfo = await getLatestBlockhash();
+              vtx.message.recentBlockhash = bhInfo.blockhash;
             }
 
             signedTx = await connectedWallet.provider.signTransaction(vtx);
@@ -794,11 +866,17 @@
             signedTx = await connectedWallet.provider.signTransaction(tx);
           }
 
-          var sig = await connection.sendRawTransaction(signedTx.serialize(), {
+          var serialized = signedTx.serialize();
+          var confirmBhInfo = await getLatestBlockhash();
+          var sig = await connection.sendRawTransaction(serialized, {
             skipPreflight: true,
-            maxRetries: 3,
           });
-          await connection.confirmTransaction(sig, "confirmed");
+
+          showStatus("Transaction " + (i + 1) + "/" + txs.length + " sent. Confirming...", "info");
+
+          await confirmWithRetry(sig, serialized, confirmBhInfo, connection, function(msg) {
+            showStatus("Transaction " + (i + 1) + "/" + txs.length + ": " + msg, "info");
+          });
           signatures.push(sig);
 
           showStatus(
