@@ -591,30 +591,112 @@ async function connectWallet(name, provider) {
 }
 
 /* ── Signing ── */
+
+/** Check whether a signature slot has a real (non-zero) signature. */
+function isNonEmptySig(sig) {
+  for (var i = 0; i < sig.length; i++) {
+    if (sig[i] !== 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Check whether a VersionedTransaction already carries a real (non-zero) signature.
+ * Returns the indices of pre-signed slots so we can save/restore them.
+ */
+function findPartialSignatures(vtx) {
+  var preSigned = [];
+  for (var i = 0; i < vtx.signatures.length; i++) {
+    if (vtx.signatures[i].length === 64 && isNonEmptySig(vtx.signatures[i])) {
+      preSigned.push({ index: i, sig: new Uint8Array(vtx.signatures[i]) });
+    }
+  }
+  return preSigned;
+}
+
+/**
+ * Fetch a fresh blockhash from RPC. Used only for txs without partial signatures.
+ */
+async function getLatestBlockhash() {
+  var rpcUrl = sessionData.rpcUrl || 'https://api.mainnet-beta.solana.com';
+  var bhRes = await fetch(rpcUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0', id: 1,
+      method: 'getLatestBlockhash',
+      params: [{ commitment: 'finalized' }],
+    }),
+  });
+  var bhData = await bhRes.json();
+  if (bhData.error) throw new Error('Failed to get blockhash: ' + bhData.error.message);
+  return bhData.result.value.blockhash;
+}
+
+/**
+ * Sign and send an array of base58-encoded transactions.
+ * Handles both versioned and legacy txs, and correctly preserves
+ * partial signatures from the API (e.g. mint keypair) that Phantom
+ * would otherwise reject during simulation.
+ */
 async function signTransactions(txsBase58, description) {
   document.getElementById('signDesc').textContent = description || 'Confirm in your wallet';
 
+  var rpcUrl = sessionData.rpcUrl || 'https://api.mainnet-beta.solana.com';
+  var connection = new solanaWeb3.Connection(rpcUrl, 'confirmed');
   var signatures = [];
+
   for (var i = 0; i < txsBase58.length; i++) {
     showStatus('Signing transaction ' + (i + 1) + '/' + txsBase58.length + '...', 'loading');
     var txBytes = base58Decode(txsBase58[i]);
-    var tx = solanaWeb3.VersionedTransaction.deserialize(txBytes);
-    var signed = await walletProvider.signTransaction(tx);
-    var raw = signed.serialize();
+    var signedTx;
+    var isVersioned = false;
 
-    var rpcUrl = sessionData.rpcUrl || 'https://api.mainnet-beta.solana.com';
-    var sendRes = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 1,
-        method: 'sendTransaction',
-        params: [btoa(String.fromCharCode.apply(null, raw)), { encoding: 'base64' }],
-      }),
+    try {
+      var vtx = solanaWeb3.VersionedTransaction.deserialize(txBytes);
+      isVersioned = true;
+
+      var preSigned = findPartialSignatures(vtx);
+
+      if (preSigned.length > 0) {
+        /* Zero out existing signatures so Phantom's simulation doesn't
+           choke on "partial signature doesn't match" — Phantom verifies
+           all non-zero sigs during signTransaction. */
+        for (var p = 0; p < preSigned.length; p++) {
+          vtx.signatures[preSigned[p].index] = new Uint8Array(64);
+        }
+      } else {
+        var bh = await getLatestBlockhash();
+        vtx.message.recentBlockhash = bh;
+      }
+
+      signedTx = await walletProvider.signTransaction(vtx);
+
+      /* Restore the API's partial signatures after the wallet signed. */
+      for (var r = 0; r < preSigned.length; r++) {
+        signedTx.signatures[preSigned[r].index] = preSigned[r].sig;
+      }
+
+    } catch (versionedErr) {
+      if (isVersioned) {
+        throw new Error('Wallet rejected transaction: ' + versionedErr.message);
+      }
+
+      var legacyTx = solanaWeb3.Transaction.from(txBytes);
+      if (!legacyTx.feePayer) legacyTx.feePayer = walletProvider.publicKey;
+      if (!legacyTx.recentBlockhash) {
+        var freshBh = await connection.getLatestBlockhash();
+        legacyTx.recentBlockhash = freshBh.blockhash;
+      }
+      signedTx = await walletProvider.signTransaction(legacyTx);
+    }
+
+    var sig = await connection.sendRawTransaction(signedTx.serialize(), {
+      skipPreflight: true,
+      maxRetries: 3,
     });
-    var sendData = await sendRes.json();
-    if (sendData.error) throw new Error(sendData.error.message);
-    signatures.push(sendData.result);
+    await connection.confirmTransaction(sig, 'confirmed');
+    signatures.push(sig);
     showStatus('Transaction ' + (i + 1) + '/' + txsBase58.length + ' confirmed.', 'info');
   }
   return signatures;

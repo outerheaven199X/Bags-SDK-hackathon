@@ -677,6 +677,44 @@
       }
     }
 
+    /** Check whether a signature slot has a real (non-zero) signature. */
+    function isNonEmptySig(sig) {
+      for (var i = 0; i < sig.length; i++) {
+        if (sig[i] !== 0) return true;
+      }
+      return false;
+    }
+
+    /**
+     * Find all pre-signed signature slots in a VersionedTransaction.
+     * Returns array of { index, sig } so we can save/restore them.
+     */
+    function findPartialSignatures(vtx) {
+      var preSigned = [];
+      for (var i = 0; i < vtx.signatures.length; i++) {
+        if (vtx.signatures[i].length === 64 && isNonEmptySig(vtx.signatures[i])) {
+          preSigned.push({ index: i, sig: new Uint8Array(vtx.signatures[i]) });
+        }
+      }
+      return preSigned;
+    }
+
+    /** Fetch a fresh blockhash from RPC. Used only for txs without partial signatures. */
+    async function getLatestBlockhash() {
+      var bhRes = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1,
+          method: "getLatestBlockhash",
+          params: [{ commitment: "finalized" }],
+        }),
+      });
+      var bhData = await bhRes.json();
+      if (bhData.error) throw new Error("Failed to get blockhash: " + bhData.error.message);
+      return bhData.result.value.blockhash;
+    }
+
     /** Sign and send all current transactions, then advance to next phase. */
     async function signAndSend(phase) {
       var btn = document.getElementById("sign-btn");
@@ -698,11 +736,34 @@
         try {
           var txBytes = decodeBase58(txs[i]);
           var signedTx;
+          var isVersioned = false;
 
           try {
             var vtx = VersionedTransaction.deserialize(txBytes);
+            isVersioned = true;
+
+            var preSigned = findPartialSignatures(vtx);
+
+            if (preSigned.length > 0) {
+              /* Zero out existing sigs so Phantom simulation doesn't reject them. */
+              for (var p = 0; p < preSigned.length; p++) {
+                vtx.signatures[preSigned[p].index] = new Uint8Array(64);
+              }
+            } else {
+              var freshBh = await getLatestBlockhash();
+              vtx.message.recentBlockhash = freshBh;
+            }
+
             signedTx = await connectedWallet.provider.signTransaction(vtx);
-          } catch (_e) {
+
+            /* Restore the API's partial signatures after the wallet signed. */
+            for (var r = 0; r < preSigned.length; r++) {
+              signedTx.signatures[preSigned[r].index] = preSigned[r].sig;
+            }
+
+          } catch (versionedErr) {
+            if (isVersioned) throw versionedErr;
+
             var tx = Transaction.from(txBytes);
             if (!tx.feePayer) tx.feePayer = connectedWallet.provider.publicKey;
             if (!tx.recentBlockhash) {
@@ -712,7 +773,10 @@
             signedTx = await connectedWallet.provider.signTransaction(tx);
           }
 
-          var sig = await connection.sendRawTransaction(signedTx.serialize());
+          var sig = await connection.sendRawTransaction(signedTx.serialize(), {
+            skipPreflight: true,
+            maxRetries: 3,
+          });
           await connection.confirmTransaction(sig, "confirmed");
           signatures.push(sig);
 
