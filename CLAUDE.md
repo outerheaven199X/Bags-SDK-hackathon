@@ -31,4 +31,4 @@ Everything else (image approval, regeneration, SOL amount, wallet connect, signi
 
 ## Tone
 
-Keep it casual. This user is @varien — no crypto bro energy, no jargon. Talk like a human.
+Keep it casual — no crypto bro energy, no jargon. Talk like a human.

@@ -6,6 +6,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { getBagsSDK } from "../../client/bags-sdk-wrapper.js";
 import { bagsPost } from "../../client/bags-rest.js";
+import type { ClaimablePosition, DammPositionInfo } from "../../client/types.js";
 import { mcpError } from "../../utils/errors.js";
 import { lamportsToSol } from "../../utils/formatting.js";
 import { requireValidAddress } from "../../utils/validation.js";
@@ -28,7 +29,7 @@ const inputSchema = {
  * @param position - Claimable position data.
  * @returns Request body for claim-txs/v2 endpoint.
  */
-function buildClaimParams(wallet: string, position: Record<string, unknown>): Record<string, unknown> {
+function buildClaimParams(wallet: string, position: ClaimablePosition): Record<string, unknown> {
   const params: Record<string, unknown> = {
     feeClaimer: wallet,
     tokenMint: position.baseMint,
@@ -44,7 +45,7 @@ function buildClaimParams(wallet: string, position: Record<string, unknown>): Re
   }
 
   if (position.isMigrated && position.dammPositionInfo) {
-    const damm = position.dammPositionInfo as Record<string, unknown>;
+    const damm: DammPositionInfo = position.dammPositionInfo;
     params.claimDammV2Fees = true;
     params.dammV2Pool = damm.pool;
     params.dammV2Position = damm.position;
@@ -95,8 +96,8 @@ export function registerClaimAllFees(server: McpServer) {
         const errors: Array<{ tokenMint: string; error: string }> = [];
 
         for (const pos of claimable) {
-          const position = pos as unknown as Record<string, unknown>;
-          const mint = String(position.baseMint ?? "unknown");
+          const position = pos as ClaimablePosition;
+          const mint = position.baseMint ?? "unknown";
           try {
             const claimParams = buildClaimParams(walletAddress, position);
             const result = await bagsPost<ClaimTxResponse[]>(CLAIM_API_PATH, claimParams);
@@ -128,7 +129,7 @@ export function registerClaimAllFees(server: McpServer) {
           (sum, c) => sum + parseFloat(c.claimableSol), 0,
         ).toFixed(4);
 
-        const signingUrl = createSigningSession(
+        const signingUrl = await createSigningSession(
           allTxStrings,
           `Claim ${totalSol} SOL in fees`,
           {

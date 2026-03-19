@@ -5,7 +5,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { createLaunchSession } from "../../signing/serve.js";
 import { mcpError } from "../../utils/errors.js";
-import { LAMPORTS_PER_SOL } from "../../utils/constants.js";
+import { solToLamports } from "../../utils/formatting.js";
 
 const inputSchema = {
   tokenMint: z.string().describe("Base58 token mint from bags_create_token_info"),
@@ -28,9 +28,9 @@ export function registerOpenLaunchPage(server: McpServer) {
     inputSchema,
     async ({ tokenMint, uri, claimersArray, basisPointsArray, initialBuySol, description, meta }) => {
       try {
-        const initialBuyLamports = Math.round(initialBuySol * LAMPORTS_PER_SOL);
+        const initialBuyLamports = solToLamports(initialBuySol);
 
-        const url = createLaunchSession({
+        const url = await createLaunchSession({
           tokenMint,
           uri,
           claimersArray,

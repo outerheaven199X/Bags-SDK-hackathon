@@ -1,7 +1,7 @@
 /** Local signing server — serves wallet-connect pages for transaction signing and token launches. */
 
 import express from "express";
-import { randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,10 +13,14 @@ const SIGNING_PORT = 3141;
 /** Placeholder for claimersArray entries that should be replaced with the connected wallet. */
 export const WALLET_PLACEHOLDER = "__CONNECTED_WALLET__";
 
+/** Allowed Origin values — only the local signing server itself. */
+const ALLOWED_ORIGIN = `http://localhost:${SIGNING_PORT}`;
+
 /** Pre-built signing session — transactions already exist. */
 interface SigningSession {
   type: "sign";
   id: string;
+  csrfToken: string;
   transactions: string[];
   description: string;
   meta: Record<string, string>;
@@ -30,6 +34,7 @@ interface SigningSession {
 interface LaunchSession {
   type: "launch";
   id: string;
+  csrfToken: string;
   tokenMint: string;
   uri: string;
   claimersArray: string[];
@@ -51,6 +56,7 @@ interface LaunchSession {
 interface ScoutSession {
   type: "scout";
   id: string;
+  csrfToken: string;
   name: string;
   symbol: string;
   description: string;
@@ -77,6 +83,16 @@ type Session = SigningSession | LaunchSession | ScoutSession;
 
 let serverRunning = false;
 
+/** Generate a cryptographically strong session ID (32 bytes hex = 64 chars). */
+function generateSessionId(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/** Generate a CSRF token for a session. */
+function generateCsrfToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
 /**
  * Resolve the HTML page path relative to this module.
  */
@@ -91,6 +107,48 @@ function loadPageHtml(): string {
 function loadScoutPageHtml(): string {
   const thisDir = dirname(fileURLToPath(import.meta.url));
   return readFileSync(resolve(thisDir, "scout-page.html"), "utf-8");
+}
+
+/**
+ * Wrap an async route handler so Express 4 catches rejected promises.
+ * @param fn - Async request handler.
+ * @returns Wrapped handler that forwards errors to Express error middleware.
+ */
+function asyncHandler(
+  fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<void>,
+): express.RequestHandler {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
+/**
+ * Validate the Origin header on POST requests to prevent CSRF.
+ * Rejects requests from foreign origins (e.g. malicious pages posting to localhost).
+ */
+function validateOrigin(req: express.Request, res: express.Response): boolean {
+  const origin = req.headers.origin;
+  if (origin && origin !== ALLOWED_ORIGIN) {
+    res.status(403).json({ error: "Forbidden: origin not allowed." });
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validate the CSRF token on a POST request against the session's stored token.
+ * @param req - Express request (expects body.csrfToken).
+ * @param session - The session containing the expected token.
+ * @param res - Express response (sends 403 on mismatch).
+ * @returns True if valid, false if response was already sent.
+ */
+function validateCsrf(req: express.Request, session: Session, res: express.Response): boolean {
+  const token = req.body?.csrfToken;
+  if (!token || token !== session.csrfToken) {
+    res.status(403).json({ error: "Invalid or missing CSRF token." });
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -110,8 +168,8 @@ function registerSignRoutes(app: express.Express, pageHtml: string): void {
     res.type("html").send(pageHtml);
   });
 
-  app.get("/api/sign/:sessionId", (req, res) => {
-    const session = getSession<SigningSession>(req.params.sessionId);
+  app.get("/api/sign/:sessionId", asyncHandler(async (req, res) => {
+    const session = await getSession<SigningSession>(req.params.sessionId);
     if (!session || session.type !== "sign") {
       res.status(404).json({ error: "Session not found or expired." });
       return;
@@ -121,20 +179,23 @@ function registerSignRoutes(app: express.Express, pageHtml: string): void {
       description: session.description,
       meta: session.meta,
       rpcUrl: session.rpcUrl,
+      csrfToken: session.csrfToken,
     });
-  });
+  }));
 
-  app.post("/api/sign/:sessionId/complete", (req, res) => {
-    const session = getSession<SigningSession>(req.params.sessionId);
+  app.post("/api/sign/:sessionId/complete", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<SigningSession>(req.params.sessionId);
     if (!session || session.type !== "sign") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
     session.signatures = req.body.signatures || [];
     session.complete = true;
-    setSession(req.params.sessionId, session);
+    await setSession(req.params.sessionId, session);
     res.json({ ok: true });
-  });
+  }));
 }
 
 /**
@@ -142,25 +203,20 @@ function registerSignRoutes(app: express.Express, pageHtml: string): void {
  * Used when the fee config already exists on-chain (zero transactions returned).
  */
 async function skipToLaunchPhase(session: LaunchSession, res: express.Response): Promise<void> {
-  try {
-    const result = await buildLaunchTx(
-      session.wallet!, session.uri, session.tokenMint,
-      session.meteoraConfigKey!, session.initialBuyLamports,
-    );
-    session.launchTx = result.transaction;
-    session.phase = "launch";
-    setSession(session.id, session);
+  const result = await buildLaunchTx(
+    session.wallet!, session.uri, session.tokenMint,
+    session.meteoraConfigKey!, session.initialBuyLamports,
+  );
+  session.launchTx = result.transaction;
+  session.phase = "launch";
+  await setSession(session.id, session);
 
-    const solAmount = session.initialBuyLamports / 1_000_000_000;
-    res.json({
-      phase: "launch",
-      transactions: [result.transaction],
-      description: `Fee config exists — launch ${session.meta.Symbol || "token"} (initial buy: ${solAmount} SOL)`,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: msg });
-  }
+  const solAmount = session.initialBuyLamports / 1_000_000_000;
+  res.json({
+    phase: "launch",
+    transactions: [result.transaction],
+    description: `Fee config exists — launch ${session.meta.Symbol || "token"} (initial buy: ${solAmount} SOL)`,
+  });
 }
 
 /**
@@ -171,8 +227,8 @@ function registerLaunchRoutes(app: express.Express, pageHtml: string): void {
     res.type("html").send(pageHtml);
   });
 
-  app.get("/api/launch/:sessionId", (req, res) => {
-    const session = getSession<LaunchSession>(req.params.sessionId);
+  app.get("/api/launch/:sessionId", asyncHandler(async (req, res) => {
+    const session = await getSession<LaunchSession>(req.params.sessionId);
     if (!session || session.type !== "launch") {
       res.status(404).json({ error: "Session not found or expired." });
       return;
@@ -182,15 +238,18 @@ function registerLaunchRoutes(app: express.Express, pageHtml: string): void {
       meta: session.meta,
       rpcUrl: session.rpcUrl,
       phase: session.phase,
+      csrfToken: session.csrfToken,
     });
-  });
+  }));
 
-  app.post("/api/launch/:sessionId/connect", async (req, res) => {
-    const session = getSession<LaunchSession>(req.params.sessionId);
+  app.post("/api/launch/:sessionId/connect", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<LaunchSession>(req.params.sessionId);
     if (!session || session.type !== "launch") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
     if (session.phase !== "connect") {
       res.status(400).json({ error: `Expected phase 'connect', got '${session.phase}'.` });
       return;
@@ -206,41 +265,38 @@ function registerLaunchRoutes(app: express.Express, pageHtml: string): void {
       session.initialBuyLamports = buyFromPage;
     }
 
-    try {
-      const claimers = session.claimersArray.map((c) => c === WALLET_PLACEHOLDER ? wallet : c);
-      const result = await buildFeeConfigTxs(
-        wallet, session.tokenMint, claimers, session.basisPointsArray,
-      );
-      session.wallet = wallet;
-      session.meteoraConfigKey = result.meteoraConfigKey;
-      session.feeConfigTxs = result.transactions;
+    const claimers = session.claimersArray.map((c) => c === WALLET_PLACEHOLDER ? wallet : c);
+    const result = await buildFeeConfigTxs(
+      wallet, session.tokenMint, claimers, session.basisPointsArray,
+    );
+    session.wallet = wallet;
+    session.meteoraConfigKey = result.meteoraConfigKey;
+    session.feeConfigTxs = result.transactions;
 
-      if (result.transactions.length === 0) {
-        session.phase = "fee_config";
-        setSession(req.params.sessionId, session);
-        await skipToLaunchPhase(session, res);
-        return;
-      }
-
+    if (result.transactions.length === 0) {
       session.phase = "fee_config";
-      setSession(req.params.sessionId, session);
-      res.json({
-        phase: "fee_config",
-        transactions: result.transactions,
-        description: `Fee setup for ${session.meta.Symbol || session.tokenMint}`,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: msg });
+      await setSession(req.params.sessionId, session);
+      await skipToLaunchPhase(session, res);
+      return;
     }
-  });
 
-  app.post("/api/launch/:sessionId/fee-signed", async (req, res) => {
-    const session = getSession<LaunchSession>(req.params.sessionId);
+    session.phase = "fee_config";
+    await setSession(req.params.sessionId, session);
+    res.json({
+      phase: "fee_config",
+      transactions: result.transactions,
+      description: `Fee setup for ${session.meta.Symbol || session.tokenMint}`,
+    });
+  }));
+
+  app.post("/api/launch/:sessionId/fee-signed", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<LaunchSession>(req.params.sessionId);
     if (!session || session.type !== "launch") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
     if (session.phase !== "fee_config") {
       res.status(400).json({ error: `Expected phase 'fee_config', got '${session.phase}'.` });
       return;
@@ -248,43 +304,40 @@ function registerLaunchRoutes(app: express.Express, pageHtml: string): void {
 
     session.signatures.push(...(req.body.signatures || []));
 
-    try {
-      const result = await buildLaunchTx(
-        session.wallet!, session.uri, session.tokenMint,
-        session.meteoraConfigKey!, session.initialBuyLamports,
-      );
-      session.launchTx = result.transaction;
-      session.phase = "launch";
-      setSession(req.params.sessionId, session);
+    const result = await buildLaunchTx(
+      session.wallet!, session.uri, session.tokenMint,
+      session.meteoraConfigKey!, session.initialBuyLamports,
+    );
+    session.launchTx = result.transaction;
+    session.phase = "launch";
+    await setSession(req.params.sessionId, session);
 
-      const solAmount = session.initialBuyLamports / 1_000_000_000;
-      res.json({
-        phase: "launch",
-        transactions: [result.transaction],
-        description: `Launch ${session.meta.Symbol || "token"} (initial buy: ${solAmount} SOL)`,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: msg });
-    }
-  });
+    const solAmount = session.initialBuyLamports / 1_000_000_000;
+    res.json({
+      phase: "launch",
+      transactions: [result.transaction],
+      description: `Launch ${session.meta.Symbol || "token"} (initial buy: ${solAmount} SOL)`,
+    });
+  }));
 
-  app.post("/api/launch/:sessionId/complete", (req, res) => {
-    const session = getSession<LaunchSession>(req.params.sessionId);
+  app.post("/api/launch/:sessionId/complete", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<LaunchSession>(req.params.sessionId);
     if (!session || session.type !== "launch") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
     session.signatures.push(...(req.body.signatures || []));
     session.phase = "complete";
-    setSession(req.params.sessionId, session);
+    await setSession(req.params.sessionId, session);
     res.json({ ok: true });
-  });
+  }));
 }
 
 /**
  * Register routes for scout preview sessions (/scout/:id).
- * Image approval flow: preview → regenerate → approve → wallet → sign → complete.
+ * Image approval flow: preview -> regenerate -> approve -> wallet -> sign -> complete.
  */
 function registerScoutRoutes(app: express.Express): void {
   const scoutHtml = loadScoutPageHtml();
@@ -293,8 +346,8 @@ function registerScoutRoutes(app: express.Express): void {
     res.type("html").send(scoutHtml);
   });
 
-  app.get("/api/scout/:sessionId", (req, res) => {
-    const session = getSession<ScoutSession>(req.params.sessionId);
+  app.get("/api/scout/:sessionId", asyncHandler(async (req, res) => {
+    const session = await getSession<ScoutSession>(req.params.sessionId);
     if (!session || session.type !== "scout") {
       res.status(404).json({ error: "Session not found or expired." });
       return;
@@ -310,45 +363,45 @@ function registerScoutRoutes(app: express.Express): void {
       meta: session.meta,
       rpcUrl: session.rpcUrl,
       phase: session.phase,
+      csrfToken: session.csrfToken,
     });
-  });
+  }));
 
-  app.post("/api/scout/:sessionId/regenerate", async (req, res) => {
-    const session = getSession<ScoutSession>(req.params.sessionId);
+  app.post("/api/scout/:sessionId/regenerate", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<ScoutSession>(req.params.sessionId);
     if (!session || session.type !== "scout") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
 
-    try {
-      const { generateTokenImage, resolveImageConfig } = await import("../agent/strategies/imagegen.js");
-      const config = resolveImageConfig();
-      if (!config) {
-        res.status(400).json({ error: "No image generation API key configured." });
-        return;
-      }
-      const prompt = session.imagePrompt
-        || `A bold, iconic token logo for "${session.name}" ($${session.symbol}). ${session.description}. Clean vector style, centered on a solid color background, designed to look great at small sizes.`;
-      const result = await generateTokenImage(prompt, config);
-      if (!result?.url) {
-        res.status(500).json({ error: "Image generation returned no result." });
-        return;
-      }
-      session.imageUrl = result.url;
-      setSession(req.params.sessionId, session);
-      res.json({ imageUrl: result.url });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: msg });
+    const { generateTokenImage, resolveImageConfig } = await import("../agent/strategies/imagegen.js");
+    const config = resolveImageConfig();
+    if (!config) {
+      res.status(400).json({ error: "No image generation API key configured." });
+      return;
     }
-  });
+    const prompt = session.imagePrompt
+      || `A bold, iconic token logo for "${session.name}" ($${session.symbol}). ${session.description}. Clean vector style, centered on a solid color background, designed to look great at small sizes.`;
+    const result = await generateTokenImage(prompt, config);
+    if (!result?.url) {
+      res.status(500).json({ error: "Image generation returned no result." });
+      return;
+    }
+    session.imageUrl = result.url;
+    await setSession(req.params.sessionId, session);
+    res.json({ imageUrl: result.url });
+  }));
 
-  app.post("/api/scout/:sessionId/approve", async (req, res) => {
-    const session = getSession<ScoutSession>(req.params.sessionId);
+  app.post("/api/scout/:sessionId/approve", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<ScoutSession>(req.params.sessionId);
     if (!session || session.type !== "scout") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
 
     const { wallet, initialBuyLamports: buyFromPage } = req.body;
     if (!wallet || typeof wallet !== "string") {
@@ -358,64 +411,61 @@ function registerScoutRoutes(app: express.Express): void {
 
     const buyLamports = typeof buyFromPage === "number" ? buyFromPage : session.initialBuyLamports;
 
-    try {
-      session.wallet = wallet;
-      session.initialBuyLamports = buyLamports;
-      session.phase = "approved";
+    session.wallet = wallet;
+    session.initialBuyLamports = buyLamports;
+    session.phase = "approved";
 
-      const { getBagsSDK } = await import("../client/bags-sdk-wrapper.js");
-      const sdk = getBagsSDK();
+    const { getBagsSDK } = await import("../client/bags-sdk-wrapper.js");
+    const sdk = getBagsSDK();
 
-      const tokenInfo = await sdk.tokenLaunch.createTokenInfoAndMetadata({
-        name: session.name,
-        symbol: session.symbol,
-        description: session.description,
-        imageUrl: session.imageUrl,
-      });
+    const tokenInfo = await sdk.tokenLaunch.createTokenInfoAndMetadata({
+      name: session.name,
+      symbol: session.symbol,
+      description: session.description,
+      imageUrl: session.imageUrl,
+    });
 
-      session.tokenMint = tokenInfo.tokenMint;
-      session.uri = tokenInfo.tokenLaunch?.uri ?? tokenInfo.tokenMetadata;
+    session.tokenMint = tokenInfo.tokenMint;
+    session.uri = tokenInfo.tokenLaunch?.uri ?? tokenInfo.tokenMetadata;
 
-      const claimers = session.claimersArray.map((c) => c === WALLET_PLACEHOLDER ? wallet : c);
-      const feeResult = await buildFeeConfigTxs(
-        wallet, session.tokenMint!, claimers, session.basisPointsArray,
+    const claimers = session.claimersArray.map((c) => c === WALLET_PLACEHOLDER ? wallet : c);
+    const feeResult = await buildFeeConfigTxs(
+      wallet, session.tokenMint!, claimers, session.basisPointsArray,
+    );
+    session.meteoraConfigKey = feeResult.meteoraConfigKey;
+
+    if (feeResult.transactions.length === 0) {
+      session.phase = "launch";
+      const launchResult = await buildLaunchTx(
+        wallet, session.uri!, session.tokenMint!,
+        session.meteoraConfigKey!, buyLamports,
       );
-      session.meteoraConfigKey = feeResult.meteoraConfigKey;
-
-      if (feeResult.transactions.length === 0) {
-        session.phase = "launch";
-        const launchResult = await buildLaunchTx(
-          wallet, session.uri!, session.tokenMint!,
-          session.meteoraConfigKey!, buyLamports,
-        );
-        setSession(req.params.sessionId, session);
-        res.json({
-          phase: "launch",
-          transactions: [launchResult.transaction],
-          description: `Launch ${session.symbol}`,
-        });
-        return;
-      }
-
-      session.phase = "fee_config";
-      setSession(req.params.sessionId, session);
+      await setSession(req.params.sessionId, session);
       res.json({
-        phase: "fee_config",
-        transactions: feeResult.transactions,
-        description: `Sign ${feeResult.transactions.length} fee setup transaction(s) for ${session.symbol}`,
+        phase: "launch",
+        transactions: [launchResult.transaction],
+        description: `Launch ${session.symbol}`,
       });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: msg });
+      return;
     }
-  });
 
-  app.post("/api/scout/:sessionId/fee-signed", async (req, res) => {
-    const session = getSession<ScoutSession>(req.params.sessionId);
+    session.phase = "fee_config";
+    await setSession(req.params.sessionId, session);
+    res.json({
+      phase: "fee_config",
+      transactions: feeResult.transactions,
+      description: `Sign ${feeResult.transactions.length} fee setup transaction(s) for ${session.symbol}`,
+    });
+  }));
+
+  app.post("/api/scout/:sessionId/fee-signed", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<ScoutSession>(req.params.sessionId);
     if (!session || session.type !== "scout") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
     if (session.phase !== "fee_config") {
       res.status(400).json({ error: `Expected phase 'fee_config', got '${session.phase}'.` });
       return;
@@ -423,36 +473,46 @@ function registerScoutRoutes(app: express.Express): void {
 
     session.signatures.push(...(req.body.signatures || []));
 
-    try {
-      const launchResult = await buildLaunchTx(
-        session.wallet!, session.uri!, session.tokenMint!,
-        session.meteoraConfigKey!, session.initialBuyLamports,
-      );
-      session.phase = "launch";
-      setSession(req.params.sessionId, session);
-      const solAmount = session.initialBuyLamports / 1_000_000_000;
-      res.json({
-        phase: "launch",
-        transactions: [launchResult.transaction],
-        description: `Launch ${session.symbol} (initial buy: ${solAmount} SOL)`,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: msg });
-    }
-  });
+    const launchResult = await buildLaunchTx(
+      session.wallet!, session.uri!, session.tokenMint!,
+      session.meteoraConfigKey!, session.initialBuyLamports,
+    );
+    session.phase = "launch";
+    await setSession(req.params.sessionId, session);
+    const solAmount = session.initialBuyLamports / 1_000_000_000;
+    res.json({
+      phase: "launch",
+      transactions: [launchResult.transaction],
+      description: `Launch ${session.symbol} (initial buy: ${solAmount} SOL)`,
+    });
+  }));
 
-  app.post("/api/scout/:sessionId/complete", (req, res) => {
-    const session = getSession<ScoutSession>(req.params.sessionId);
+  app.post("/api/scout/:sessionId/complete", asyncHandler(async (req, res) => {
+    if (!validateOrigin(req, res)) return;
+    const session = await getSession<ScoutSession>(req.params.sessionId);
     if (!session || session.type !== "scout") {
       res.status(404).json({ error: "Session not found." });
       return;
     }
+    if (!validateCsrf(req, session, res)) return;
     session.signatures.push(...(req.body.signatures || []));
     session.phase = "complete";
-    setSession(req.params.sessionId, session);
+    await setSession(req.params.sessionId, session);
     res.json({ ok: true });
-  });
+  }));
+}
+
+/**
+ * Express error handler — catches unhandled async errors from route handlers.
+ */
+function errorHandler(
+  err: Error,
+  _req: express.Request,
+  res: express.Response,
+  _next: express.NextFunction,
+): void {
+  console.error("[signing-server] Unhandled error:", err.message);
+  res.status(500).json({ error: err.message || "Internal server error" });
 }
 
 /**
@@ -467,6 +527,7 @@ export function startSigningServer(): void {
   const app = express();
   app.use(express.json());
   registerRoutes(app, pageHtml);
+  app.use(errorHandler);
 
   app.listen(SIGNING_PORT, "127.0.0.1", () => {
     console.error(`[bags-sdk-mcp] Signing server at http://localhost:${SIGNING_PORT}`);
@@ -480,19 +541,20 @@ export function startSigningServer(): void {
  * @param meta - Key-value pairs displayed as token details.
  * @returns The localhost URL for the signing page.
  */
-export function createSigningSession(
+export async function createSigningSession(
   transactions: string[],
   description: string,
   meta: Record<string, string>,
-): string {
+): Promise<string> {
   startSigningServer();
 
-  const id = randomUUID();
+  const id = generateSessionId();
   const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 
-  setSession(id, {
+  await setSession(id, {
     type: "sign",
     id,
+    csrfToken: generateCsrfToken(),
     transactions,
     description,
     meta,
@@ -521,15 +583,16 @@ export interface LaunchSessionParams {
  * @param params - Token details and fee split info.
  * @returns The localhost URL for the launch page.
  */
-export function createLaunchSession(params: LaunchSessionParams): string {
+export async function createLaunchSession(params: LaunchSessionParams): Promise<string> {
   startSigningServer();
 
-  const id = randomUUID();
+  const id = generateSessionId();
   const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 
-  setSession(id, {
+  await setSession(id, {
     type: "launch",
     id,
+    csrfToken: generateCsrfToken(),
     tokenMint: params.tokenMint,
     uri: params.uri,
     claimersArray: params.claimersArray,
@@ -570,15 +633,16 @@ export interface ScoutSessionParams {
  * @param params - Token package details and fee config.
  * @returns The localhost URL for the scout preview page.
  */
-export function createScoutSession(params: ScoutSessionParams): string {
+export async function createScoutSession(params: ScoutSessionParams): Promise<string> {
   startSigningServer();
 
-  const id = randomUUID();
+  const id = generateSessionId();
   const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 
-  setSession(id, {
+  await setSession(id, {
     type: "scout",
     id,
+    csrfToken: generateCsrfToken(),
     name: params.name,
     symbol: params.symbol,
     description: params.description,
@@ -609,8 +673,8 @@ export function createScoutSession(params: ScoutSessionParams): string {
  * @param sessionId - The session UUID.
  * @returns The session if complete, null otherwise.
  */
-export function getSessionStatus(sessionId: string): Session | null {
-  const session = getSession<Session>(sessionId);
+export async function getSessionStatus(sessionId: string): Promise<Session | null> {
+  const session = await getSession<Session>(sessionId);
   if (!session) return null;
   if (session.type === "sign") return session.complete ? session : null;
   return session.phase === "complete" ? session : null;

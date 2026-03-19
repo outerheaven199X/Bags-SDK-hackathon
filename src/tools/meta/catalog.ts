@@ -103,6 +103,27 @@ const TOOL_CATALOG: ToolGroup[] = [
       { name: "bags_token_holdings", description: "List all token holdings for a wallet" },
     ],
   },
+  {
+    domain: "Signing",
+    tools: [
+      { name: "bags_open_signing_page", description: "Open a local page to sign pre-built transactions" },
+      { name: "bags_open_launch_page", description: "Open a two-phase launch page (fee config + launch)" },
+    ],
+  },
+  {
+    domain: "Scout",
+    tools: [
+      { name: "bags_scout_scan", description: "Scan trending topics and generate token launch packages" },
+      { name: "bags_scout_launch", description: "Launch a token from a scout package with image preview" },
+      { name: "bags_generate_token_image", description: "Generate a token logo from a text prompt" },
+    ],
+  },
+  {
+    domain: "Meta",
+    tools: [
+      { name: "bags_tool_catalog", description: "List all available tools grouped by domain" },
+    ],
+  },
 ];
 
 const CUSTOM_TOOL_GUIDANCE = [

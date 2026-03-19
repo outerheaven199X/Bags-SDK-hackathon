@@ -1,12 +1,10 @@
 /** Standalone validation utilities for fee config data before API submission. */
 
 import { BPS_TOTAL, MAX_FEE_CLAIMERS, LOOKUP_TABLE_THRESHOLD } from "../utils/constants.js";
+import { SUPPORTED_PROVIDERS } from "../client/types.js";
 import type { SupportedProvider } from "../client/types.js";
 
-const VALID_PROVIDERS = new Set<SupportedProvider>([
-  "twitter", "tiktok", "kick", "instagram", "onlyfans",
-  "github", "apple", "google", "email", "solana", "moltbook",
-]);
+const VALID_PROVIDERS = new Set<SupportedProvider>(SUPPORTED_PROVIDERS);
 
 /**
  * Validate that a provider string is one of the accepted Bags platforms.

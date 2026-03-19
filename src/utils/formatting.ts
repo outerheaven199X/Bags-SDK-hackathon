@@ -7,8 +7,12 @@ import { LAMPORTS_PER_SOL, BPS_TOTAL } from "./constants.js";
  * @param lamports - Raw lamport value from the API.
  * @returns SOL amount with up to 9 decimal places, trailing zeros stripped.
  */
-export function lamportsToSol(lamports: string | number): string {
-  const value = typeof lamports === "string" ? BigInt(lamports) : BigInt(lamports);
+export function lamportsToSol(lamports: string | number | bigint): string {
+  const value = typeof lamports === "bigint"
+    ? lamports
+    : typeof lamports === "string"
+      ? BigInt(lamports)
+      : BigInt(Math.round(lamports));
   const whole = value / BigInt(LAMPORTS_PER_SOL);
   const frac = value % BigInt(LAMPORTS_PER_SOL);
   const fracStr = frac.toString().padStart(9, "0").replace(/0+$/, "");

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bags SDK — MCP Server Documentation</title>
-<meta name="description" content="Launch a Solana token from your terminal. 44 MCP tools for trading, fees, claims, Dexscreener, and agent auth. Full documentation and developer guide.">
+<meta name="description" content="Launch a Solana token from your terminal. 46 MCP tools for trading, fees, claims, Dexscreener, and agent auth. Full documentation and developer guide.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -347,9 +347,9 @@ td code { font-size: 12px; white-space: nowrap; }
 <!-- ═══════════════════ INTRODUCTION ═══════════════════ -->
 <div class="section active" id="introduction">
   <h1>Bags SDK &mdash; MCP Server</h1>
-  <p class="subtitle">Launch a Solana token from your terminal in three steps. 44 MCP tools cover trading, fee configuration, claims, Dexscreener listing, and agent authentication &mdash; the AI client does the work.</p>
+  <p class="subtitle">Launch a Solana token from your terminal in three steps. 46 MCP tools cover trading, fee configuration, claims, Dexscreener listing, and agent authentication &mdash; the AI client does the work.</p>
   <div class="badges">
-    <span class="badge">44 Tools</span>
+    <span class="badge">46 Tools</span>
     <span class="badge">4 Resources</span>
     <span class="badge">6 Prompts</span>
     <a href="https://www.npmjs.com/package/bags-sdk-mcp" class="badge">npm bags-sdk-mcp</a>
@@ -361,7 +361,7 @@ td code { font-size: 12px; white-space: nowrap; }
 
   <h3>Key Features</h3>
   <ul>
-    <li><strong>44 MCP tools</strong> &mdash; trading, token launches, fee management, claiming, analytics, Dexscreener, signing, and more</li>
+    <li><strong>46 MCP tools</strong> &mdash; trading, token launches, fee management, claiming, analytics, Dexscreener, signing, scout, and more</li>
     <li><strong>Fee Config Composer</strong> &mdash; fluent builder for multi-party fee splits without raw BPS math</li>
     <li><strong>Tiered caching</strong> &mdash; 5-level TTL cache to stay within the 1,000 req/hr rate limit</li>
     <li><strong>Zero-custody</strong> &mdash; no private keys stored; all transactions returned unsigned</li>
@@ -478,7 +478,7 @@ npm start</code></pre>
 
   <div class="callout callout-tip">
     <span class="callout-icon">&#128161;</span>
-    <span>After saving the config, restart your client. The 41 tools, 4 resources, and 6 prompts appear automatically.</span>
+    <span>After saving the config, restart your client. The 46 tools, 4 resources, and 6 prompts appear automatically.</span>
   </div>
 </div>
 
@@ -537,7 +537,7 @@ npm start</code></pre>
 │   │   ├── bags-rest.ts      # Direct REST client for undocumented endpoints
 │   │   ├── cache.ts          # Tiered TTL cache (5 levels)
 │   │   └── types.ts          # TypeScript types for API responses
-│   ├── tools/                # 44 MCP tools organized by domain
+│   ├── tools/                # 46 MCP tools organized by domain
 │   │   ├── trading/          # quote, swap
 │   │   ├── launch/           # feed, create-info, create-tx, launch-full
 │   │   ├── fees/             # resolve-wallet, resolve-bulk, create-config, ...
@@ -549,7 +549,7 @@ npm start</code></pre>
 │   │   ├── analytics/        # creators, lifetime-fees, claim-stats, top-tokens
 │   │   ├── solana/           # send-tx, balance, holdings
 │   │   ├── signing/          # open-signing-page, open-launch-page
-│   │   └── _registry.ts      # Imports and registers all 44 tools
+│   │   └── _registry.ts      # Imports and registers all 46 tools
 │   ├── resources/            # 4 MCP resources
 │   ├── prompts/              # 6 MCP prompts
 │   ├── composer/             # Fee Config Builder + templates + validator
@@ -614,6 +614,17 @@ npm start</code></pre>
     <span class="callout-icon">&#128274;</span>
     <span><strong>Security guarantee:</strong> No private key, seed phrase, or signing capability ever passes through this server. The <code>bags_agent_wallet_export</code> tool only exports public key information.</span>
   </div>
+
+  <h3>Signing Server Hardening</h3>
+  <p>The localhost signing server includes multiple layers of protection:</p>
+  <ul>
+    <li><strong>High-entropy session IDs</strong> &mdash; 32-byte <code>crypto.randomBytes</code> (64 hex chars) instead of UUIDs</li>
+    <li><strong>CSRF tokens</strong> &mdash; per-session tokens embedded in the page and validated on every POST</li>
+    <li><strong>Origin validation</strong> &mdash; POST requests from foreign origins are rejected (prevents cross-site attacks)</li>
+    <li><strong>SRI integrity hashes</strong> &mdash; CDN-loaded <code>@solana/web3.js</code> verified with SHA-384 subresource integrity</li>
+    <li><strong>XSS prevention</strong> &mdash; all dynamic content rendered via <code>textContent</code>, never <code>innerHTML</code></li>
+    <li><strong>Race-safe sessions</strong> &mdash; file-backed session store serialized behind an async mutex</li>
+  </ul>
 </div>
 
 <!-- ═══════════════════ CACHING ═══════════════════ -->
@@ -942,7 +953,7 @@ npm start</code></pre>
     <h4>bags_tool_catalog</h4>
     <p class="desc">Returns a structured catalog of all available tools with descriptions, inputs, and groupings. Useful for discovery and help.</p>
     <p class="meta">Inputs: none</p>
-    <p class="meta">Returns: categorized list of all 44 tools</p>
+    <p class="meta">Returns: categorized list of all 46 tools</p>
   </div>
 </div>
 

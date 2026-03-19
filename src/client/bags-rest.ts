@@ -3,6 +3,8 @@
 import { DEFAULT_API_BASE } from "../utils/constants.js";
 import type { BagsResponse } from "./types.js";
 
+const ERROR_BODY_MAX_LENGTH = 200;
+
 function getBase(): string {
   return process.env.BAGS_API_BASE || DEFAULT_API_BASE;
 }
@@ -11,6 +13,36 @@ function getApiKey(): string {
   const key = process.env.BAGS_API_KEY;
   if (!key) throw new Error("BAGS_API_KEY is required. Get one at dev.bags.fm");
   return key;
+}
+
+/**
+ * Read the response body on HTTP errors so callers get a useful message.
+ * @param res - Fetch response with !res.ok.
+ * @returns A BagsResponse with the error detail.
+ */
+async function errorFromResponse<T>(res: Response): Promise<BagsResponse<T>> {
+  const body = await res.text();
+  let detail: string;
+  try {
+    const parsed = JSON.parse(body);
+    detail = parsed?.error ?? body.slice(0, ERROR_BODY_MAX_LENGTH);
+  } catch {
+    detail = body.slice(0, ERROR_BODY_MAX_LENGTH);
+  }
+  return { success: false, error: `HTTP ${res.status}: ${detail}` };
+}
+
+/**
+ * Validate that the parsed JSON matches the expected BagsResponse shape.
+ * @param json - Parsed JSON response.
+ * @returns Validated BagsResponse or a failure wrapper.
+ */
+function validateResponseShape<T>(json: unknown): BagsResponse<T> {
+  if (typeof json !== "object" || json === null || typeof (json as Record<string, unknown>).success !== "boolean") {
+    const preview = JSON.stringify(json).slice(0, ERROR_BODY_MAX_LENGTH);
+    return { success: false, error: `Unexpected API response shape: ${preview}` };
+  }
+  return json as BagsResponse<T>;
 }
 
 /**
@@ -35,10 +67,11 @@ export async function bagsGet<T>(
   });
 
   if (!res.ok) {
-    return { success: false, error: `HTTP ${res.status}: ${res.statusText}` };
+    return errorFromResponse<T>(res);
   }
 
-  return res.json() as Promise<BagsResponse<T>>;
+  const json = await res.json();
+  return validateResponseShape<T>(json);
 }
 
 /**
@@ -61,8 +94,9 @@ export async function bagsPost<T>(
   });
 
   if (!res.ok) {
-    return { success: false, error: `HTTP ${res.status}: ${res.statusText}` };
+    return errorFromResponse<T>(res);
   }
 
-  return res.json() as Promise<BagsResponse<T>>;
+  const json = await res.json();
+  return validateResponseShape<T>(json);
 }

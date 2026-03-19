@@ -2,7 +2,7 @@
 
 <p align="center">
   Launch a coin in 3 steps from your terminal.<br/>
-  44 MCP tools. Fee splits, claims, Dexscreener, agent auth, scout mode.<br/>
+  46 MCP tools. Fee splits, claims, Dexscreener, agent auth, scout mode.<br/>
   Your AI handles the rest.
 </p>
 

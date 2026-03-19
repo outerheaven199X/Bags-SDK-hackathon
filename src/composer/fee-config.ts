@@ -48,13 +48,15 @@ export class FeeConfigBuilder {
 
   /**
    * Split the full 10000 BPS evenly across all provided recipients.
-   * Remainder goes to the first recipient.
+   * When the split is uneven (e.g. 3 recipients: 10000/3 = 3333 each with 1 BPS remainder),
+   * the extra BPS are distributed round-robin starting from the first recipient.
+   * Example: 3 recipients => 3334 + 3333 + 3333 = 10000.
    */
   splitEvenly(recipients: Array<{ provider: SupportedProvider; username: string }>): this {
     const bpsEach = Math.floor(BPS_TOTAL / recipients.length);
     const remainder = BPS_TOTAL - bpsEach * recipients.length;
     for (let i = 0; i < recipients.length; i++) {
-      const extra = i === 0 ? remainder : 0;
+      const extra = i < remainder ? 1 : 0;
       this.addRecipient(recipients[i].provider, recipients[i].username, bpsEach + extra);
     }
     return this;

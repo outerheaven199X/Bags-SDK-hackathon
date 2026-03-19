@@ -6,18 +6,13 @@ export interface BagsResponse<T> {
   error?: string;
 }
 
-export type SupportedProvider =
-  | "twitter"
-  | "tiktok"
-  | "kick"
-  | "instagram"
-  | "onlyfans"
-  | "github"
-  | "apple"
-  | "google"
-  | "email"
-  | "solana"
-  | "moltbook";
+/** Canonical list of supported social providers — single source of truth for both type and runtime checks. */
+export const SUPPORTED_PROVIDERS = [
+  "twitter", "tiktok", "kick", "instagram", "onlyfans",
+  "github", "apple", "google", "email", "solana", "moltbook",
+] as const;
+
+export type SupportedProvider = typeof SUPPORTED_PROVIDERS[number];
 
 export interface FeeShareWalletResponse {
   provider: string;
@@ -115,6 +110,30 @@ export interface DexscreenerAvailabilityResponse {
 export interface CreatePartnerConfigBody {
   partnerWallet: string;
   feeBps?: number;
+}
+
+/** Shape returned by sdk.fee.getAllClaimablePositions — local mirror since SDK doesn't export it. */
+export interface ClaimablePosition {
+  baseMint: string;
+  quoteMint?: string;
+  programId: string;
+  isCustomFeeVault?: boolean;
+  virtualPool?: string;
+  virtualPoolAddress?: string;
+  isMigrated?: boolean;
+  dammPositionInfo?: DammPositionInfo;
+  totalClaimableLamportsUserShare: number;
+}
+
+/** DAMM V2 position detail embedded in a claimable position. */
+export interface DammPositionInfo {
+  pool: string;
+  position: string;
+  positionNftAccount: string;
+  tokenAMint: string;
+  tokenBMint: string;
+  tokenAVault: string;
+  tokenBVault: string;
 }
 
 export interface ClaimEventsParams {

@@ -6,7 +6,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { getBagsSDK } from "../../client/bags-sdk-wrapper.js";
 import { bagsPost } from "../../client/bags-rest.js";
+import type { ClaimablePosition, DammPositionInfo } from "../../client/types.js";
 import { mcpError } from "../../utils/errors.js";
+import { lamportsToSol } from "../../utils/formatting.js";
 import { requireValidAddress } from "../../utils/validation.js";
 import { createSigningSession, startSigningServer } from "../../signing/serve.js";
 
@@ -27,7 +29,7 @@ const inputSchema = {
  * @param position - Position data from getAllClaimablePositions.
  * @returns Request body for the claim-txs/v2 endpoint.
  */
-function buildClaimParams(wallet: string, position: Record<string, unknown>): Record<string, unknown> {
+function buildClaimParams(wallet: string, position: ClaimablePosition): Record<string, unknown> {
   const params: Record<string, unknown> = {
     feeClaimer: wallet,
     tokenMint: position.baseMint,
@@ -43,7 +45,7 @@ function buildClaimParams(wallet: string, position: Record<string, unknown>): Re
   }
 
   if (position.isMigrated && position.dammPositionInfo) {
-    const damm = position.dammPositionInfo as Record<string, unknown>;
+    const damm: DammPositionInfo = position.dammPositionInfo;
     params.claimDammV2Fees = true;
     params.dammV2Pool = damm.pool;
     params.dammV2Position = damm.position;
@@ -84,7 +86,7 @@ export function registerClaimFees(server: McpServer) {
           return mcpError(new Error(`No claimable position found for ${tokenMint}`));
         }
 
-        const position = matching[0] as unknown as Record<string, unknown>;
+        const position = matching[0] as ClaimablePosition;
         const claimParams = buildClaimParams(walletAddress, position);
 
         const result = await bagsPost<ClaimTxResponse[]>(CLAIM_API_PATH, claimParams);
@@ -97,8 +99,8 @@ export function registerClaimFees(server: McpServer) {
         );
 
         startSigningServer();
-        const claimableSol = position.claimableSol ?? position.totalClaimableLamportsUserShare;
-        const signingUrl = createSigningSession(
+        const claimableSol = lamportsToSol(String(position.totalClaimableLamportsUserShare));
+        const signingUrl = await createSigningSession(
           txStrings,
           `Claim fees from ${tokenMint.slice(0, 8)}...`,
           {

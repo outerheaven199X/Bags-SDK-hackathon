@@ -61,7 +61,7 @@ export function registerScoutLaunch(server: McpServer) {
         const claimers = pkg.feeConfig.recipients.map(() => WALLET_PLACEHOLDER);
         const bps = pkg.feeConfig.recipients.map((r) => r.bps);
 
-        const previewUrl = createScoutSession({
+        const previewUrl = await createScoutSession({
           name: pkg.name,
           symbol: pkg.symbol.toUpperCase(),
           description: pkg.description,

@@ -1,4 +1,4 @@
-/** File-backed session store — shares sessions between the MCP process and the Express server. */
+/** File-backed session store with in-memory mutex to prevent TOCTOU races. */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -13,6 +13,32 @@ const SESSION_TTL_MS = 600_000;
 type StoreData = Record<string, any>;
 
 /**
+ * Process-level mutex — serialises all read-modify-write cycles so two
+ * concurrent requests (e.g. polling + signing) can't clobber each other.
+ */
+let lockPromise: Promise<void> = Promise.resolve();
+
+/**
+ * Acquire the store lock, run `fn`, then release.
+ * @param fn - Critical section that reads and/or writes the store.
+ * @returns Whatever `fn` returns.
+ */
+function withLock<T>(fn: () => T): Promise<T> {
+  let release: () => void;
+  const next = new Promise<void>((res) => { release = res; });
+  const prev = lockPromise;
+  lockPromise = next;
+
+  return prev.then(() => {
+    try {
+      return fn();
+    } finally {
+      release!();
+    }
+  });
+}
+
+/**
  * Read the full store from disk. Returns empty object if file missing or corrupt.
  */
 function readStore(): StoreData {
@@ -25,7 +51,7 @@ function readStore(): StoreData {
 }
 
 /**
- * Write the full store to disk.
+ * Write the full store to disk atomically (as atomic as sync write allows).
  * @param data - The session map to persist.
  */
 function writeStore(data: StoreData): void {
@@ -34,43 +60,11 @@ function writeStore(data: StoreData): void {
 }
 
 /**
- * Get a session by ID, pruning expired entries first.
- * @param id - Session UUID.
- * @returns The session object or undefined if not found/expired.
- */
-export function getSession<T>(id: string): T | undefined {
-  const store = readStore();
-  pruneExpiredEntries(store);
-  return store[id] as T | undefined;
-}
-
-/**
- * Save or update a session by ID.
- * @param id - Session UUID.
- * @param session - The session data to persist.
- */
-export function setSession(id: string, session: any): void {
-  const store = readStore();
-  pruneExpiredEntries(store);
-  store[id] = session;
-  writeStore(store);
-}
-
-/**
- * Delete a session by ID.
- * @param id - Session UUID.
- */
-export function deleteSession(id: string): void {
-  const store = readStore();
-  delete store[id];
-  writeStore(store);
-}
-
-/**
- * Remove expired sessions from a store object (mutates in place, writes to disk).
+ * Remove expired sessions from a store object (mutates in place).
  * @param store - The store data to prune.
+ * @returns True if any entries were removed.
  */
-function pruneExpiredEntries(store: StoreData): void {
+function pruneExpiredEntries(store: StoreData): boolean {
   const now = Date.now();
   let changed = false;
   for (const [id, session] of Object.entries(store)) {
@@ -79,7 +73,48 @@ function pruneExpiredEntries(store: StoreData): void {
       changed = true;
     }
   }
-  if (changed) {
+  return changed;
+}
+
+/**
+ * Get a session by ID, pruning expired entries first.
+ * Serialised behind the store mutex to avoid TOCTOU races.
+ * @param id - Session UUID.
+ * @returns The session object or undefined if not found/expired.
+ */
+export function getSession<T>(id: string): Promise<T | undefined> {
+  return withLock(() => {
+    const store = readStore();
+    const pruned = pruneExpiredEntries(store);
+    if (pruned) writeStore(store);
+    return store[id] as T | undefined;
+  });
+}
+
+/**
+ * Save or update a session by ID.
+ * Serialised behind the store mutex to avoid TOCTOU races.
+ * @param id - Session UUID.
+ * @param session - The session data to persist.
+ */
+export function setSession(id: string, session: any): Promise<void> {
+  return withLock(() => {
+    const store = readStore();
+    pruneExpiredEntries(store);
+    store[id] = session;
     writeStore(store);
-  }
+  });
+}
+
+/**
+ * Delete a session by ID.
+ * Serialised behind the store mutex to avoid TOCTOU races.
+ * @param id - Session UUID.
+ */
+export function deleteSession(id: string): Promise<void> {
+  return withLock(() => {
+    const store = readStore();
+    delete store[id];
+    writeStore(store);
+  });
 }

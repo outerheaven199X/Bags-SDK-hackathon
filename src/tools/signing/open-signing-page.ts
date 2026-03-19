@@ -23,7 +23,7 @@ export function registerOpenSigningPage(server: McpServer) {
     inputSchema,
     async ({ transactions, description, meta }) => {
       try {
-        const url = createSigningSession(transactions, description, meta || {});
+        const url = await createSigningSession(transactions, description, meta || {});
 
         return {
           content: [{

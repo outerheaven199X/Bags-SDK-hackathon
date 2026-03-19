@@ -3,8 +3,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 import { getBagsSDK } from "../../client/bags-sdk-wrapper.js";
-import { lamportsToSol } from "../../utils/formatting.js";
-import { LAMPORTS_PER_SOL } from "../../utils/constants.js";
+import { lamportsToSol, solToLamports } from "../../utils/formatting.js";
 import type { AutoClaimConfig } from "../types.js";
 
 const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -18,7 +17,7 @@ const DEFAULT_MIN_THRESHOLD_SOL = 0.01;
 export async function autoClaimLoop(config: AutoClaimConfig): Promise<void> {
   const sdk = getBagsSDK();
   const wallet = new PublicKey(config.walletAddress);
-  const thresholdLamports = Math.round(config.minClaimThresholdSol * LAMPORTS_PER_SOL);
+  const thresholdLamports = solToLamports(config.minClaimThresholdSol);
 
   console.error(`[auto-claim] Monitoring ${config.walletAddress}`);
   console.error(`[auto-claim] Threshold: ${config.minClaimThresholdSol} SOL`);
