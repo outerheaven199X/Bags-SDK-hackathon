@@ -78,11 +78,41 @@ body {
   width: 100%;
   aspect-ratio: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #1a1f28;
   color: var(--dim);
   font-size: 14px;
+  gap: 16px;
+}
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 14, 19, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 2;
+}
+.preview-card { position: relative; }
+.big-spinner {
+  width: 48px; height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.overlay-text {
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+.overlay-sub {
+  color: var(--dim);
+  font-size: 12px;
 }
 
 /* Token info card */
@@ -360,13 +390,31 @@ document.getElementById('btnRegen').onclick = () => {
   document.getElementById('approveRow').style.display = 'none';
 };
 
+function showImageLoading() {
+  removeImageOverlay();
+  const card = document.querySelector('.preview-card');
+  const overlay = document.createElement('div');
+  overlay.className = 'preview-overlay';
+  overlay.id = 'imageOverlay';
+  overlay.innerHTML = `
+    <div class="big-spinner"></div>
+    <div class="overlay-text">Generating new logo...</div>
+    <div class="overlay-sub">This takes 5-10 seconds, hang tight</div>
+  `;
+  card.appendChild(overlay);
+}
+
+function removeImageOverlay() {
+  const existing = document.getElementById('imageOverlay');
+  if (existing) existing.remove();
+}
+
 document.getElementById('btnSubmitRegen').onclick = async () => {
   const feedback = document.getElementById('feedbackInput').value.trim();
-  showStatus('<span class="spinner"></span> Regenerating logo...', 'loading');
   document.getElementById('btnSubmitRegen').disabled = true;
-  document.getElementById('previewImage').style.display = 'none';
-  document.getElementById('previewPlaceholder').style.display = 'flex';
-  document.getElementById('previewPlaceholder').textContent = 'Generating new logo...';
+  document.getElementById('btnSubmitRegen').textContent = 'Generating...';
+  document.getElementById('feedbackSection').classList.remove('visible');
+  showImageLoading();
 
   try {
     const res = await fetch(`${API_BASE}/regenerate`, {
@@ -378,14 +426,22 @@ document.getElementById('btnSubmitRegen').onclick = async () => {
     if (!res.ok) throw new Error(data.error || 'Regeneration failed');
 
     sessionData.imageUrl = data.imageUrl;
-    renderImage();
-    hideStatus();
-    document.getElementById('feedbackSection').classList.remove('visible');
+    removeImageOverlay();
+
+    const img = document.getElementById('previewImage');
+    img.src = data.imageUrl;
+    img.style.display = 'block';
+    document.getElementById('previewPlaceholder').style.display = 'none';
+    document.getElementById('approveRow').style.display = 'flex';
     document.getElementById('feedbackInput').value = '';
+    hideStatus();
   } catch (e) {
+    removeImageOverlay();
     showStatus(e.message, 'error');
+    document.getElementById('approveRow').style.display = 'flex';
   }
   document.getElementById('btnSubmitRegen').disabled = false;
+  document.getElementById('btnSubmitRegen').textContent = 'Regenerate with Feedback';
 };
 
 /* ── Wallet Connect ── */
