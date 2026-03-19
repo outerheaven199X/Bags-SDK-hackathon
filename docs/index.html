@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bags SDK — MCP Server Documentation</title>
-<meta name="description" content="Launch a Solana token from your terminal. 41 MCP tools for trading, fees, claims, Dexscreener, and agent auth. Full documentation and developer guide.">
+<meta name="description" content="Launch a Solana token from your terminal. 44 MCP tools for trading, fees, claims, Dexscreener, and agent auth. Full documentation and developer guide.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -310,6 +310,7 @@ td code { font-size: 12px; white-space: nowrap; }
     <a class="sidebar-link" data-section="tools-solana">Solana (3)</a>
     <a class="sidebar-link" data-section="tools-signing">Signing (2)</a>
     <a class="sidebar-link" data-section="tools-meta">Meta (1)</a>
+    <a class="sidebar-link" data-section="tools-scout">Scout (3)</a>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-heading">Resources &amp; Prompts</div>
@@ -346,9 +347,9 @@ td code { font-size: 12px; white-space: nowrap; }
 <!-- ═══════════════════ INTRODUCTION ═══════════════════ -->
 <div class="section active" id="introduction">
   <h1>Bags SDK &mdash; MCP Server</h1>
-  <p class="subtitle">Launch a Solana token from your terminal in three steps. 41 MCP tools cover trading, fee configuration, claims, Dexscreener listing, and agent authentication &mdash; the AI client does the work.</p>
+  <p class="subtitle">Launch a Solana token from your terminal in three steps. 44 MCP tools cover trading, fee configuration, claims, Dexscreener listing, and agent authentication &mdash; the AI client does the work.</p>
   <div class="badges">
-    <span class="badge">41 Tools</span>
+    <span class="badge">44 Tools</span>
     <span class="badge">4 Resources</span>
     <span class="badge">6 Prompts</span>
     <a href="https://www.npmjs.com/package/bags-sdk-mcp" class="badge">npm bags-sdk-mcp</a>
@@ -360,7 +361,7 @@ td code { font-size: 12px; white-space: nowrap; }
 
   <h3>Key Features</h3>
   <ul>
-    <li><strong>41 MCP tools</strong> &mdash; trading, token launches, fee management, claiming, analytics, Dexscreener, signing, and more</li>
+    <li><strong>44 MCP tools</strong> &mdash; trading, token launches, fee management, claiming, analytics, Dexscreener, signing, and more</li>
     <li><strong>Fee Config Composer</strong> &mdash; fluent builder for multi-party fee splits without raw BPS math</li>
     <li><strong>Tiered caching</strong> &mdash; 5-level TTL cache to stay within the 1,000 req/hr rate limit</li>
     <li><strong>Zero-custody</strong> &mdash; no private keys stored; all transactions returned unsigned</li>
@@ -536,7 +537,7 @@ npm start</code></pre>
 │   │   ├── bags-rest.ts      # Direct REST client for undocumented endpoints
 │   │   ├── cache.ts          # Tiered TTL cache (5 levels)
 │   │   └── types.ts          # TypeScript types for API responses
-│   ├── tools/                # 41 MCP tools organized by domain
+│   ├── tools/                # 44 MCP tools organized by domain
 │   │   ├── trading/          # quote, swap
 │   │   ├── launch/           # feed, create-info, create-tx, launch-full
 │   │   ├── fees/             # resolve-wallet, resolve-bulk, create-config, ...
@@ -548,7 +549,7 @@ npm start</code></pre>
 │   │   ├── analytics/        # creators, lifetime-fees, claim-stats, top-tokens
 │   │   ├── solana/           # send-tx, balance, holdings
 │   │   ├── signing/          # open-signing-page, open-launch-page
-│   │   └── _registry.ts      # Imports and registers all 41 tools
+│   │   └── _registry.ts      # Imports and registers all 44 tools
 │   ├── resources/            # 4 MCP resources
 │   ├── prompts/              # 6 MCP prompts
 │   ├── composer/             # Fee Config Builder + templates + validator
@@ -941,7 +942,31 @@ npm start</code></pre>
     <h4>bags_tool_catalog</h4>
     <p class="desc">Returns a structured catalog of all available tools with descriptions, inputs, and groupings. Useful for discovery and help.</p>
     <p class="meta">Inputs: none</p>
-    <p class="meta">Returns: categorized list of all 41 tools</p>
+    <p class="meta">Returns: categorized list of all 44 tools</p>
+  </div>
+</div>
+
+<div class="section" id="tools-scout">
+  <h2>Scout Tools</h2>
+  <div class="tool-card">
+    <h4>bags_scout_scan</h4>
+    <p class="desc">Run one scout scan cycle. Fetches live headlines from Reddit, Hacker News, and Bags.fm, ranks them by meme potential, and assembles complete launch packages with AI-generated names, tickers, descriptions, and logos. Returns packages for review &mdash; does not launch anything.</p>
+    <p class="meta">Inputs: <code>sources</code> (string[], default ["bags","news"]), <code>maxIdeas</code> (number 1&ndash;10, default 3)</p>
+    <p class="meta">Returns: array of LaunchPackage objects with name, symbol, description, imageUrl, feeConfig, source, and reasoning</p>
+    <p class="meta">Annotations: <code>readOnlyHint: true</code></p>
+  </div>
+  <div class="tool-card">
+    <h4>bags_scout_launch</h4>
+    <p class="desc">Launch a token from a scout package. Creates token metadata on IPFS, configures fee sharing, and opens a signing page where you connect your wallet and sign. Accepts a full or modified LaunchPackage from <code>bags_scout_scan</code>.</p>
+    <p class="meta">Inputs: <code>package</code> (LaunchPackage), <code>walletAddress</code> (string), <code>initialBuyLamports</code> (number, optional)</p>
+    <p class="meta">Returns: tokenMint, metadata URI, signing page URL</p>
+  </div>
+  <div class="tool-card">
+    <h4>bags_generate_token_image</h4>
+    <p class="desc">Generate a token logo image from a text prompt using fal.ai (Flux Schnell) or Replicate. Returns a public image URL ready for use in token launches. Works as a standalone tool outside of scout mode.</p>
+    <p class="meta">Inputs: <code>prompt</code> (string), <code>provider</code> ("fal" | "replicate", optional)</p>
+    <p class="meta">Returns: image URL and provider used</p>
+    <p class="meta">Annotations: <code>openWorldHint: true</code></p>
   </div>
 </div>
 
@@ -1170,8 +1195,120 @@ npm start</code></pre>
   <p>Watches the launch feed every 30 seconds. Tracks seen mints. Escalates interesting launches to Sonnet for analysis.</p>
   <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --agent --monitor</code></pre>
 
+  <h4>scout</h4>
+  <p>A global trend radar that scans live news headlines from across the internet, identifies the most memeable topics, and assembles complete token launch packages. You review the ideas and decide what ships &mdash; the agent never launches autonomously.</p>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --agent --scout</code></pre>
+
+  <h4>How Scout Works</h4>
+  <p>Every scan cycle (default 30 minutes), Scout runs a four-stage pipeline:</p>
+  <table>
+    <thead><tr><th>Stage</th><th>What Happens</th><th>Model</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. Gather</strong></td><td>Fetches live headlines from Reddit (7 subreddits), Hacker News, and the Bags.fm feed</td><td>&mdash;</td></tr>
+      <tr><td><strong>2. Rank</strong></td><td>Filters for virality, meme potential, emotional charge, and timeliness</td><td>Hermes 4</td></tr>
+      <tr><td><strong>3. Create</strong></td><td>Generates token name, ticker, description, and logo for each top idea</td><td>Sonnet + fal.ai</td></tr>
+      <tr><td><strong>4. Present</strong></td><td>Shows packages to you with <code>launch</code> / <code>edit</code> / <code>skip</code> commands</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+
+  <h4>News Sources</h4>
+  <p>Scout pulls real-time headlines from diverse sources &mdash; not just crypto. Any trending topic can become a token:</p>
+  <table>
+    <thead><tr><th>Source</th><th>Category</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>r/worldnews</td><td>World events</td><td>Breaking geopolitical news, international drama</td></tr>
+      <tr><td>r/news</td><td>Breaking news</td><td>US and general breaking stories</td></tr>
+      <tr><td>r/politics</td><td>Politics</td><td>Government moves, elections, policy changes</td></tr>
+      <tr><td>r/memes</td><td>Memes</td><td>Viral internet culture, trending formats</td></tr>
+      <tr><td>r/technology</td><td>Tech</td><td>AI announcements, product launches, tech drama</td></tr>
+      <tr><td>r/wallstreetbets</td><td>Finance memes</td><td>Market sentiment, retail trader culture</td></tr>
+      <tr><td>r/CryptoCurrency</td><td>Crypto</td><td>Token news, protocol updates, market moves</td></tr>
+      <tr><td>Hacker News</td><td>Tech / science</td><td>Deep tech, startups, science breakthroughs</td></tr>
+      <tr><td>Bags.fm feed</td><td>Platform</td><td>Active launches and top tokens on-platform</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">&#128161;</span>
+    <span>Image generation is optional. Set <code>FAL_API_KEY</code> (fal.ai) or <code>REPLICATE_API_KEY</code> (Replicate) for auto-generated logos. Without one, packages come without images and you add one before launching.</span>
+  </div>
+
+  <h4>Scout Configuration</h4>
+  <table>
+    <thead><tr><th>Env Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>IMAGE_GEN_PROVIDER</code></td><td><code>fal</code></td><td>Image provider: <code>fal</code> or <code>replicate</code></td></tr>
+      <tr><td><code>FAL_API_KEY</code></td><td>&mdash;</td><td>fal.ai API key (uses Flux Schnell for fast icon generation)</td></tr>
+      <tr><td><code>REPLICATE_API_KEY</code></td><td>&mdash;</td><td>Replicate API key (alternative to fal.ai)</td></tr>
+      <tr><td><code>SCOUT_INTERVAL</code></td><td><code>1800</code></td><td>Seconds between scan cycles (set to 60 for testing)</td></tr>
+      <tr><td><code>SCOUT_SOURCES</code></td><td><code>bags,news</code></td><td>Comma-separated: <code>bags</code>, <code>news</code></td></tr>
+      <tr><td><code>SCOUT_MAX_IDEAS</code></td><td><code>3</code></td><td>Max launch packages per cycle (1&ndash;10)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Scout Setup Guide</h4>
+  <ol>
+    <li>Add your image gen key to <code>.env</code>: <code>FAL_API_KEY=your-key</code></li>
+    <li>Run <code>bags-sdk-mcp --agent --scout</code></li>
+    <li>Wait for the first scan (or set <code>SCOUT_INTERVAL=60</code> for testing)</li>
+    <li>Review the packages &mdash; each shows name, ticker, image status, fee split, and source</li>
+    <li>Type <code>launch 1</code> to execute, <code>edit 1</code> to modify, or <code>skip</code> to wait</li>
+    <li>Sign the returned transactions in your wallet</li>
+  </ol>
+
+  <h4>Interactive Commands</h4>
+  <table>
+    <thead><tr><th>Command</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td><code>launch N</code></td><td>Launch package N &mdash; creates token metadata, fee config, and returns unsigned transactions</td></tr>
+      <tr><td><code>edit N</code></td><td>Enter edit mode for package N &mdash; modify name, symbol, or description inline</td></tr>
+      <tr><td><code>details N</code></td><td>Show full package details including image prompt and reasoning</td></tr>
+      <tr><td><code>skip</code></td><td>Skip all packages and wait for next cycle</td></tr>
+      <tr><td><code>done</code></td><td>Exit edit mode and show updated packages</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Using Scout via MCP (Claude Desktop / Cursor)</h4>
+  <p>When connected as an MCP server, Scout exposes three tools you can invoke with natural language:</p>
+  <ul>
+    <li><strong>"Scan for trending token ideas"</strong> &rarr; calls <code>bags_scout_scan</code> &mdash; returns launch packages from live headlines</li>
+    <li><strong>"Launch the first one with my wallet"</strong> &rarr; calls <code>bags_scout_launch</code> &mdash; creates token info, fee config, and opens signing page</li>
+    <li><strong>"Generate a token logo for a space cat coin"</strong> &rarr; calls <code>bags_generate_token_image</code> &mdash; returns an image URL via fal.ai or Replicate</li>
+  </ul>
+
+  <h4>Example Flow</h4>
+  <pre><span class="lang-label">text</span><code># Scout finds trending headlines across Reddit, HN, and Bags.fm
+# Hermes ranks them by meme potential and timeliness
+# Sonnet generates creative token packages
+# fal.ai generates logos
+
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;  SCOUT FOUND 2 IDEAS                &#9474;
+&#9500;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9508;
+&#9474;  1. LNGBOOM ($LNG)                  &#9474;
+&#9474;     "Qatar's LNG plant got hit,     &#9474;
+&#9474;      energy markets in shambles"     &#9474;
+&#9474;     Image: &#10003; generated              &#9474;
+&#9474;     Source: reddit/world news        &#9474;
+&#9474;                                      &#9474;
+&#9474;  2. NOTOURWAR ($NOW)                &#9474;
+&#9474;     "Europe tells Trump: not our     &#9474;
+&#9474;      war, handle it yourself"        &#9474;
+&#9474;     Image: &#10003; generated              &#9474;
+&#9474;     Source: reddit/world news        &#9474;
+&#9500;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9508;
+&#9474;  launch 1 &#8212; launch LNGBOOM         &#9474;
+&#9474;  edit 1   &#8212; modify before launch    &#9474;
+&#9474;  skip     &#8212; wait for next cycle     &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</code></pre>
+
+  <div class="callout callout-warn">
+    <span class="callout-icon">&#9888;&#65039;</span>
+    <span><strong>Scout does NOT launch tokens autonomously.</strong> All packages require your explicit approval. It does not store private keys, and all transactions are returned unsigned for you to sign in your wallet.</span>
+  </div>
+
   <h4>Combined</h4>
-  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --agent --auto-claim --monitor</code></pre>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --agent --scout --auto-claim --monitor</code></pre>
 </div>
 
 <!-- ═══════════════════ HTTP TRANSPORT ═══════════════════ -->
@@ -1200,7 +1337,8 @@ bags-sdk-mcp --http                           # HTTP on port 3000
 bags-sdk-mcp --http --port=8080               # Custom port
 bags-sdk-mcp --agent --auto-claim             # Auto-claim strategy
 bags-sdk-mcp --agent --monitor                # Launch monitor
-bags-sdk-mcp --agent --auto-claim --monitor   # Both strategies
+bags-sdk-mcp --agent --scout                  # Scout strategy
+bags-sdk-mcp --agent --scout --auto-claim --monitor   # All strategies
 bags-sdk-mcp --help                           # Print usage</code></pre>
 
   <h3>Technology Stack</h3>

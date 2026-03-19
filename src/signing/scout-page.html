@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout Preview — Bags.fm SDK</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0e13;
+  --card: #141820;
+  --border: #1e2530;
+  --text: #e8eaed;
+  --dim: #8b929a;
+  --accent: #00ff41;
+  --accent-dim: rgba(0,255,65,0.15);
+  --danger: #ff4444;
+  --danger-dim: rgba(255,68,68,0.15);
+  --warn: #ffaa00;
+  --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.container { max-width: 520px; width: 100%; }
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.header svg { width: 32px; height: 32px; }
+.header h1 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 8px;
+  color: var(--accent);
+}
+.header p { color: var(--dim); font-size: 13px; margin-top: 4px; }
+
+/* Phase dots */
+.phases {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.phase-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.phase-dot.active { background: var(--accent); }
+.phase-dot.done { background: var(--accent); opacity: 0.5; }
+
+/* Image preview */
+.preview-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.preview-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  background: #1a1f28;
+}
+.preview-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1f28;
+  color: var(--dim);
+  font-size: 14px;
+}
+
+/* Token info card */
+.info-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--dim); }
+.info-value { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
+.reasoning {
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--accent-dim);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--accent);
+  line-height: 1.5;
+}
+
+/* Buttons */
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-approve {
+  background: var(--accent);
+  color: #000;
+}
+.btn-regen {
+  background: var(--danger-dim);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+.btn-launch {
+  background: var(--accent);
+  color: #000;
+  width: 100%;
+}
+
+/* Feedback input */
+.feedback-section {
+  display: none;
+  margin-bottom: 16px;
+}
+.feedback-section.visible { display: block; }
+.feedback-input {
+  width: 100%;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  margin-bottom: 8px;
+}
+.feedback-input:focus { border-color: var(--accent); }
+.btn-submit-regen {
+  padding: 10px 20px;
+  background: var(--warn);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Wallet picker */
+.wallet-section { display: none; margin-bottom: 16px; }
+.wallet-section.visible { display: block; }
+.wallet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.wallet-btn {
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.wallet-btn:hover { border-color: var(--accent); }
+
+/* Status */
+.status {
+  text-align: center;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: none;
+}
+.status.visible { display: block; }
+.status.info { background: var(--accent-dim); color: var(--accent); }
+.status.error { background: var(--danger-dim); color: var(--danger); }
+.status.loading { background: var(--accent-dim); color: var(--accent); }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="#00ff41" stroke-width="2"/><path d="M10 16l4 4 8-8" stroke="#00ff41" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1>Scout Preview</h1>
+    <p id="headerSub">Review your token before launch</p>
+  </div>
+
+  <div class="phases">
+    <div class="phase-dot active" id="dot-preview"></div>
+    <div class="phase-dot" id="dot-wallet"></div>
+    <div class="phase-dot" id="dot-sign"></div>
+    <div class="phase-dot" id="dot-done"></div>
+  </div>
+
+  <div id="statusBar" class="status"></div>
+
+  <!-- Phase 1: Image preview -->
+  <div id="previewPhase">
+    <div class="preview-card">
+      <img id="previewImage" class="preview-image" style="display:none" alt="Token logo preview">
+      <div id="previewPlaceholder" class="preview-placeholder">Generating logo...</div>
+    </div>
+
+    <div class="info-card" id="tokenInfo"></div>
+
+    <div class="btn-row" id="approveRow" style="display:none">
+      <button class="btn btn-approve" id="btnApprove">Approve & Launch</button>
+      <button class="btn btn-regen" id="btnRegen">Regenerate</button>
+    </div>
+
+    <div class="feedback-section" id="feedbackSection">
+      <textarea class="feedback-input" id="feedbackInput" rows="3" placeholder="What should change? (e.g. 'make it more cartoon-like', 'use red instead of blue')"></textarea>
+      <button class="btn-submit-regen" id="btnSubmitRegen">Regenerate with Feedback</button>
+    </div>
+  </div>
+
+  <!-- Phase 2: Wallet connect -->
+  <div class="wallet-section" id="walletPhase">
+    <div class="info-card">
+      <p style="text-align:center; font-weight:700; margin-bottom:12px;">Connect your wallet to launch</p>
+    </div>
+    <div class="wallet-grid" id="walletGrid"></div>
+  </div>
+
+  <!-- Phase 3: Signing (reuses launch page logic) -->
+  <div id="signPhase" style="display:none">
+    <div class="info-card" style="text-align:center">
+      <p style="font-weight:700">Sign the transactions in your wallet</p>
+      <p style="color:var(--dim); font-size:13px; margin-top:6px" id="signDesc"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const SESSION_ID = window.location.pathname.split('/').pop();
+const API_BASE = `/api/scout/${SESSION_ID}`;
+
+let sessionData = null;
+let connectedWallet = null;
+let walletProvider = null;
+
+const WALLETS = [
+  { name: 'Phantom', detect: () => window.phantom?.solana, get: () => window.phantom.solana },
+  { name: 'Solflare', detect: () => window.solflare, get: () => window.solflare },
+  { name: 'Backpack', detect: () => window.backpack, get: () => window.backpack },
+  { name: 'Coinbase', detect: () => window.coinbaseSolana, get: () => window.coinbaseSolana },
+];
+
+/* ── Init ── */
+async function init() {
+  try {
+    const res = await fetch(API_BASE);
+    if (!res.ok) throw new Error('Session expired');
+    sessionData = await res.json();
+    renderTokenInfo();
+    renderImage();
+  } catch (e) {
+    showStatus('Session expired or not found.', 'error');
+  }
+}
+
+function renderTokenInfo() {
+  const card = document.getElementById('tokenInfo');
+  const rows = [
+    ['Name', sessionData.meta.Name || sessionData.name],
+    ['Symbol', sessionData.meta.Symbol || sessionData.symbol],
+    ['Description', sessionData.description],
+    ['Fee Split', sessionData.meta.Fees || 'Solo (100%)'],
+    ['Source', sessionData.meta.Source || ''],
+  ].filter(([,v]) => v);
+
+  card.innerHTML = rows.map(([k,v]) =>
+    `<div class="info-row"><span class="info-label">${k}</span><span class="info-value">${v}</span></div>`
+  ).join('');
+
+  if (sessionData.reasoning) {
+    card.innerHTML += `<div class="reasoning">${sessionData.reasoning}</div>`;
+  }
+}
+
+function renderImage() {
+  const img = document.getElementById('previewImage');
+  const placeholder = document.getElementById('previewPlaceholder');
+
+  if (sessionData.imageUrl) {
+    img.src = sessionData.imageUrl;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    document.getElementById('approveRow').style.display = 'flex';
+  } else {
+    placeholder.textContent = 'No image generated — launch will proceed without a logo';
+    document.getElementById('approveRow').style.display = 'flex';
+  }
+}
+
+/* ── Approve ── */
+document.getElementById('btnApprove').onclick = () => {
+  setPhase('wallet');
+  detectWallets();
+};
+
+/* ── Regenerate ── */
+document.getElementById('btnRegen').onclick = () => {
+  document.getElementById('feedbackSection').classList.add('visible');
+  document.getElementById('approveRow').style.display = 'none';
+};
+
+document.getElementById('btnSubmitRegen').onclick = async () => {
+  const feedback = document.getElementById('feedbackInput').value.trim();
+  showStatus('<span class="spinner"></span> Regenerating logo...', 'loading');
+  document.getElementById('btnSubmitRegen').disabled = true;
+  document.getElementById('previewImage').style.display = 'none';
+  document.getElementById('previewPlaceholder').style.display = 'flex';
+  document.getElementById('previewPlaceholder').textContent = 'Generating new logo...';
+
+  try {
+    const res = await fetch(`${API_BASE}/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedback }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Regeneration failed');
+
+    sessionData.imageUrl = data.imageUrl;
+    renderImage();
+    hideStatus();
+    document.getElementById('feedbackSection').classList.remove('visible');
+    document.getElementById('feedbackInput').value = '';
+  } catch (e) {
+    showStatus(e.message, 'error');
+  }
+  document.getElementById('btnSubmitRegen').disabled = false;
+};
+
+/* ── Wallet Connect ── */
+function detectWallets() {
+  const grid = document.getElementById('walletGrid');
+  grid.innerHTML = '';
+  let found = 0;
+  for (const w of WALLETS) {
+    if (w.detect()) {
+      found++;
+      const btn = document.createElement('button');
+      btn.className = 'wallet-btn';
+      btn.textContent = w.name;
+      btn.onclick = () => connectWallet(w);
+      grid.appendChild(btn);
+    }
+  }
+  if (!found) {
+    grid.innerHTML = '<p style="color:var(--dim); text-align:center; grid-column:1/-1; padding:20px">No Solana wallet detected. Install Phantom, Solflare, or Backpack.</p>';
+  }
+}
+
+async function connectWallet(w) {
+  showStatus('<span class="spinner"></span> Connecting wallet...', 'loading');
+  try {
+    const provider = w.get();
+    if (provider.connect) await provider.connect();
+    const pubkey = provider.publicKey?.toBase58?.() || provider.publicKey?.toString?.();
+    if (!pubkey) throw new Error('Could not read public key');
+
+    connectedWallet = pubkey;
+    walletProvider = provider;
+
+    const res = await fetch(`${API_BASE}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet: pubkey }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Approval failed');
+
+    setPhase('sign');
+    await signTransactions(data.transactions, data.description);
+  } catch (e) {
+    showStatus(e.message, 'error');
+  }
+}
+
+/* ── Signing ── */
+async function signTransactions(txsBase58, description) {
+  document.getElementById('signDesc').textContent = description || 'Confirm in your wallet';
+  showStatus('<span class="spinner"></span> Waiting for wallet signature...', 'loading');
+
+  try {
+    const signatures = [];
+    for (const txB58 of txsBase58) {
+      const txBytes = base58Decode(txB58);
+      const { VersionedTransaction } = await getSolanaWeb3();
+      const tx = VersionedTransaction.deserialize(txBytes);
+      const signed = await walletProvider.signTransaction(tx);
+      const raw = signed.serialize();
+
+      const rpcUrl = sessionData.rpcUrl || 'https://api.mainnet-beta.solana.com';
+      const sendRes = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 1,
+          method: 'sendTransaction',
+          params: [btoa(String.fromCharCode(...raw)), { encoding: 'base64' }],
+        }),
+      });
+      const sendData = await sendRes.json();
+      if (sendData.error) throw new Error(sendData.error.message);
+      signatures.push(sendData.result);
+    }
+
+    await fetch(`${API_BASE}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatures }),
+    });
+
+    setPhase('done');
+    showStatus('Token launched! Transaction confirmed.', 'info');
+  } catch (e) {
+    showStatus('Signing failed: ' + e.message, 'error');
+  }
+}
+
+/* ── Helpers ── */
+function setPhase(phase) {
+  const phases = ['preview', 'wallet', 'sign', 'done'];
+  const idx = phases.indexOf(phase);
+  phases.forEach((p, i) => {
+    const dot = document.getElementById(`dot-${p}`);
+    dot.className = 'phase-dot' + (i < idx ? ' done' : i === idx ? ' active' : '');
+  });
+
+  document.getElementById('previewPhase').style.display = phase === 'preview' ? 'block' : 'none';
+  document.getElementById('walletPhase').className = 'wallet-section' + (phase === 'wallet' ? ' visible' : '');
+  document.getElementById('signPhase').style.display = phase === 'sign' ? 'block' : 'none';
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('statusBar');
+  el.innerHTML = msg;
+  el.className = `status visible ${type}`;
+}
+
+function hideStatus() {
+  document.getElementById('statusBar').className = 'status';
+}
+
+/* Base58 decoder */
+const B58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function base58Decode(str) {
+  const map = {};
+  for (let i = 0; i < 58; i++) map[B58_ALPHABET[i]] = BigInt(i);
+  let num = 0n;
+  for (const c of str) num = num * 58n + map[c];
+  const hex = num.toString(16).padStart(2, '0');
+  const raw = new Uint8Array(hex.match(/.{2}/g).map(h => parseInt(h, 16)));
+  let zeros = 0;
+  for (const c of str) { if (c === '1') zeros++; else break; }
+  const result = new Uint8Array(zeros + raw.length);
+  result.set(raw, zeros);
+  return result;
+}
+
+/* Lazy load solana web3 */
+let _solanaWeb3;
+async function getSolanaWeb3() {
+  if (_solanaWeb3) return _solanaWeb3;
+  _solanaWeb3 = await import('https://esm.sh/@solana/web3.js@1.98.0');
+  return _solanaWeb3;
+}
+
+init();
+</script>
+</body>
+</html>

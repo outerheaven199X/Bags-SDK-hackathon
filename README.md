@@ -2,7 +2,7 @@
 
 <p align="center">
   Launch a coin in 3 steps from your terminal.<br/>
-  41 MCP tools. Fee splits, claims, Dexscreener, agent auth.<br/>
+  44 MCP tools. Fee splits, claims, Dexscreener, agent auth, scout mode.<br/>
   Your AI handles the rest.
 </p>
 
@@ -113,7 +113,7 @@ The signing page runs on localhost. Connect the **same wallet you launched with*
 
 ---
 
-## 41 Tools
+## 44 Tools
 
 | Domain | Tools |
 |--------|-------|
@@ -128,6 +128,7 @@ The signing page runs on localhost. Connect the **same wallet you launched with*
 | **Analytics** | `token_creators` `lifetime_fees` `claim_stats` `top_tokens` |
 | **Solana** | `send_transaction` `wallet_balance` `token_holdings` |
 | **Signing** | `open_signing_page` `open_launch_page` |
+| **Scout** | `scout_scan` `scout_launch` `generate_token_image` |
 | **Meta** | `tool_catalog` |
 
 All prefixed with `bags_`.
@@ -160,10 +161,28 @@ Or use the `bags_compose_fee_config` tool and preview before committing on-chain
 ```bash
 bags-sdk-mcp --agent --auto-claim      # claim fees every 5 min
 bags-sdk-mcp --agent --monitor         # watch launches, flag interesting ones
-bags-sdk-mcp --agent --auto-claim --monitor
+bags-sdk-mcp --agent --scout           # scan trends, propose token launches
+bags-sdk-mcp --agent --scout --auto-claim --monitor   # all strategies
 ```
 
 Requires `NOUS_API_KEY` and `ANTHROPIC_API_KEY`.
+
+### Scout Strategy
+
+Scout scans trending topics every 30 minutes, assembles complete token launch packages (name, ticker, description, AI-generated logo, fee config), and presents them for your approval. You decide what ships.
+
+```
+1. Set FAL_API_KEY or REPLICATE_API_KEY in .env
+2. Run bags-sdk-mcp --agent --scout
+3. Review ideas when they appear
+4. Type "launch 1" to execute, "edit 1" to modify, or "skip" to pass
+5. Sign the returned transactions in your wallet
+```
+
+Or use it through Claude Desktop / Cursor:
+- "Scan for trending token ideas" calls `bags_scout_scan`
+- "Launch the first one with my wallet" calls `bags_scout_launch`
+- "Generate a token logo" calls `bags_generate_token_image`
 
 ---
 
@@ -183,6 +202,12 @@ No private keys pass through this server. Every tool returns unsigned transactio
 | `NOUS_API_KEY` | Agent mode | — |
 | `ANTHROPIC_API_KEY` | Agent mode | — |
 | `AGENT_WALLET_PUBKEY` | Agent mode | — |
+| `IMAGE_GEN_PROVIDER` | Scout mode | `fal` |
+| `FAL_API_KEY` | Scout mode | — |
+| `REPLICATE_API_KEY` | Scout mode | — |
+| `SCOUT_INTERVAL` | Scout mode | `1800` |
+| `SCOUT_SOURCES` | Scout mode | `bags,news` |
+| `SCOUT_MAX_IDEAS` | Scout mode | `3` |
 
 Loaded from `.env` automatically.
 

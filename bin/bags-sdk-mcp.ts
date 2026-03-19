@@ -22,8 +22,11 @@ async function main(): Promise<void> {
 
   if (args.includes("--agent")) {
     const { startAgent } = await import("../src/agent/cli.js");
+    const strategies: string[] = [];
+    if (args.includes("--auto-claim")) strategies.push("auto-claim");
+    if (args.includes("--scout")) strategies.push("scout");
     await startAgent({
-      strategies: args.includes("--auto-claim") ? ["auto-claim"] : [],
+      strategies,
       monitor: args.includes("--monitor"),
     });
     return;
@@ -52,6 +55,8 @@ USAGE:
   bags-sdk-mcp --agent      Start autonomous agent mode
   bags-sdk-mcp --agent --auto-claim   Agent with auto-claim strategy
   bags-sdk-mcp --agent --monitor      Agent with launch monitor
+  bags-sdk-mcp --agent --scout        Agent with scout strategy
+  bags-sdk-mcp --agent --scout --auto-claim --monitor   All strategies
 
 OPTIONS:
   --http          Use streamable HTTP transport instead of stdio
@@ -59,6 +64,7 @@ OPTIONS:
   --agent         Run in autonomous agent mode
   --auto-claim    Enable auto-claim strategy (agent mode)
   --monitor       Enable launch monitor strategy (agent mode)
+  --scout         Enable scout strategy (agent mode)
   -h, --help      Show this help message
 
 ENVIRONMENT:

@@ -3,6 +3,7 @@
 import type { AgentConfig } from "./types.js";
 import { autoClaimLoop, defaultAutoClaimConfig } from "./strategies/auto-claim.js";
 import { launchMonitorLoop, defaultMonitorConfig } from "./strategies/launch-monitor.js";
+import { scoutLoop, defaultScoutConfig } from "./strategies/scout.js";
 
 /**
  * Start the agent with the configured strategies.
@@ -26,9 +27,15 @@ export async function startAgent(config: AgentConfig): Promise<void> {
     promises.push(launchMonitorLoop(monitorConfig));
   }
 
+  if (config.strategies.includes("scout")) {
+    console.error("[agent] Enabling scout strategy");
+    const scoutConfig = defaultScoutConfig();
+    promises.push(scoutLoop(scoutConfig));
+  }
+
   if (promises.length === 0) {
-    console.error("[agent] No strategies enabled. Use --auto-claim or --monitor.");
-    console.error("[agent] Example: bags-sdk-mcp --agent --auto-claim --monitor");
+    console.error("[agent] No strategies enabled. Use --auto-claim, --monitor, or --scout.");
+    console.error("[agent] Example: bags-sdk-mcp --agent --scout --auto-claim --monitor");
     return;
   }
 

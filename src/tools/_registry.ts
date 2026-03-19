@@ -56,6 +56,10 @@ import { registerOpenSigningPage } from "./signing/open-signing-page.js";
 import { registerOpenLaunchPage } from "./signing/open-launch-page.js";
 import { registerToolCatalog } from "./meta/catalog.js";
 
+import { registerScoutScan } from "./scout/scan.js";
+import { registerScoutLaunch } from "./scout/launch.js";
+import { registerGenerateTokenImage } from "./scout/generate-image.js";
+
 /**
  * Register all MCP tools on the given server.
  * @param server - The McpServer instance to register tools on.
@@ -114,4 +118,8 @@ export function registerAllTools(server: McpServer) {
   registerOpenSigningPage(server);
   registerOpenLaunchPage(server);
   registerToolCatalog(server);
+
+  registerScoutScan(server);
+  registerScoutLaunch(server);
+  registerGenerateTokenImage(server);
 }

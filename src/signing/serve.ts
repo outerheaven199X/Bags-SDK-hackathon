@@ -47,7 +47,33 @@ interface LaunchSession {
   createdAt: number;
 }
 
-type Session = SigningSession | LaunchSession;
+/** Scout preview session — image approval before launch. */
+interface ScoutSession {
+  type: "scout";
+  id: string;
+  name: string;
+  symbol: string;
+  description: string;
+  imageUrl: string;
+  imagePrompt: string;
+  reasoning: string;
+  source: string;
+  feeConfig: { template: string; recipients: Array<{ provider: string; username: string; bps: number }> };
+  tokenMint: string | null;
+  uri: string | null;
+  claimersArray: string[];
+  basisPointsArray: number[];
+  initialBuyLamports: number;
+  meta: Record<string, string>;
+  rpcUrl: string;
+  phase: "preview" | "approved" | "complete";
+  wallet: string | null;
+  meteoraConfigKey: string | null;
+  signatures: string[];
+  createdAt: number;
+}
+
+type Session = SigningSession | LaunchSession | ScoutSession;
 
 const sessions = new Map<string, Session>();
 let serverRunning = false;
@@ -73,11 +99,20 @@ function loadPageHtml(): string {
 }
 
 /**
- * Register all signing/launch API routes on the Express app.
+ * Load the scout preview page HTML.
+ */
+function loadScoutPageHtml(): string {
+  const thisDir = dirname(fileURLToPath(import.meta.url));
+  return readFileSync(resolve(thisDir, "scout-page.html"), "utf-8");
+}
+
+/**
+ * Register all signing/launch/scout API routes on the Express app.
  */
 function registerRoutes(app: express.Express, pageHtml: string): void {
   registerSignRoutes(app, pageHtml);
   registerLaunchRoutes(app, pageHtml);
+  registerScoutRoutes(app);
 }
 
 /**
@@ -253,6 +288,147 @@ function registerLaunchRoutes(app: express.Express, pageHtml: string): void {
 }
 
 /**
+ * Register routes for scout preview sessions (/scout/:id).
+ * Image approval flow: preview → regenerate → approve → wallet → sign → complete.
+ */
+function registerScoutRoutes(app: express.Express): void {
+  const scoutHtml = loadScoutPageHtml();
+
+  app.get("/scout/:sessionId", (_req, res) => {
+    res.type("html").send(scoutHtml);
+  });
+
+  app.get("/api/scout/:sessionId", (req, res) => {
+    pruneExpired();
+    const session = sessions.get(req.params.sessionId);
+    if (!session || session.type !== "scout") {
+      res.status(404).json({ error: "Session not found or expired." });
+      return;
+    }
+    res.json({
+      name: session.name,
+      symbol: session.symbol,
+      description: session.description,
+      imageUrl: session.imageUrl,
+      imagePrompt: session.imagePrompt,
+      reasoning: session.reasoning,
+      source: session.source,
+      meta: session.meta,
+      rpcUrl: session.rpcUrl,
+      phase: session.phase,
+    });
+  });
+
+  app.post("/api/scout/:sessionId/regenerate", async (req, res) => {
+    const session = sessions.get(req.params.sessionId);
+    if (!session || session.type !== "scout") {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+
+    const feedback = req.body.feedback || "";
+    const updatedPrompt = feedback
+      ? `${session.imagePrompt}. User feedback: ${feedback}`
+      : session.imagePrompt;
+
+    try {
+      const { generateTokenImage, resolveImageConfig } = await import("../agent/strategies/imagegen.js");
+      const config = resolveImageConfig();
+      if (!config) {
+        res.status(400).json({ error: "No image generation API key configured." });
+        return;
+      }
+      const result = await generateTokenImage(updatedPrompt, config);
+      if (!result?.url) {
+        res.status(500).json({ error: "Image generation returned no result." });
+        return;
+      }
+      session.imageUrl = result.url;
+      session.imagePrompt = updatedPrompt;
+      res.json({ imageUrl: result.url });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: msg });
+    }
+  });
+
+  app.post("/api/scout/:sessionId/approve", async (req, res) => {
+    const session = sessions.get(req.params.sessionId);
+    if (!session || session.type !== "scout") {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+
+    const { wallet } = req.body;
+    if (!wallet || typeof wallet !== "string") {
+      res.status(400).json({ error: "Missing wallet address." });
+      return;
+    }
+
+    try {
+      session.wallet = wallet;
+      session.phase = "approved";
+
+      const { getBagsSDK } = await import("../client/bags-sdk-wrapper.js");
+      const sdk = getBagsSDK();
+
+      const tokenInfo = await sdk.tokenLaunch.createTokenInfoAndMetadata({
+        name: session.name,
+        symbol: session.symbol,
+        description: session.description,
+        imageUrl: session.imageUrl,
+      });
+
+      session.tokenMint = tokenInfo.tokenMint;
+      session.uri = tokenInfo.tokenLaunch?.uri ?? tokenInfo.tokenMetadata;
+
+      const claimers = session.claimersArray.map((c) => c === WALLET_PLACEHOLDER ? wallet : c);
+      const feeResult = await buildFeeConfigTxs(
+        wallet, session.tokenMint!, claimers, session.basisPointsArray,
+      );
+      session.meteoraConfigKey = feeResult.meteoraConfigKey;
+
+      if (feeResult.transactions.length === 0) {
+        const launchResult = await buildLaunchTx(
+          wallet, session.uri!, session.tokenMint!,
+          session.meteoraConfigKey!, session.initialBuyLamports,
+        );
+        res.json({
+          transactions: [launchResult.transaction],
+          description: `Launch ${session.symbol} (fee config exists)`,
+        });
+        return;
+      }
+
+      const launchResult = await buildLaunchTx(
+        wallet, session.uri!, session.tokenMint!,
+        session.meteoraConfigKey!, session.initialBuyLamports,
+      );
+
+      const allTxs = [...feeResult.transactions, launchResult.transaction];
+      res.json({
+        transactions: allTxs,
+        description: `Sign ${allTxs.length} transactions to launch ${session.symbol}`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: msg });
+    }
+  });
+
+  app.post("/api/scout/:sessionId/complete", (req, res) => {
+    const session = sessions.get(req.params.sessionId);
+    if (!session || session.type !== "scout") {
+      res.status(404).json({ error: "Session not found." });
+      return;
+    }
+    session.signatures.push(...(req.body.signatures || []));
+    session.phase = "complete";
+    res.json({ ok: true });
+  });
+}
+
+/**
  * Start the signing server (idempotent — only starts once).
  * Binds to 127.0.0.1 only for security.
  */
@@ -347,6 +523,61 @@ export function createLaunchSession(params: LaunchSessionParams): string {
   });
 
   return `http://localhost:${SIGNING_PORT}/launch/${id}`;
+}
+
+/** Parameters for creating a scout preview session. */
+export interface ScoutSessionParams {
+  name: string;
+  symbol: string;
+  description: string;
+  imageUrl: string;
+  imagePrompt: string;
+  reasoning: string;
+  source: string;
+  claimersArray: string[];
+  basisPointsArray: number[];
+  initialBuyLamports: number;
+  meta: Record<string, string>;
+}
+
+/**
+ * Create a scout preview session — shows image for approval before launch.
+ * @param params - Token package details and fee config.
+ * @returns The localhost URL for the scout preview page.
+ */
+export function createScoutSession(params: ScoutSessionParams): string {
+  startSigningServer();
+  pruneExpired();
+
+  const id = randomUUID();
+  const rpcUrl = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+
+  sessions.set(id, {
+    type: "scout",
+    id,
+    name: params.name,
+    symbol: params.symbol,
+    description: params.description,
+    imageUrl: params.imageUrl,
+    imagePrompt: params.imagePrompt,
+    reasoning: params.reasoning,
+    source: params.source,
+    feeConfig: { template: "solo", recipients: [] },
+    tokenMint: null,
+    uri: null,
+    claimersArray: params.claimersArray,
+    basisPointsArray: params.basisPointsArray,
+    initialBuyLamports: params.initialBuyLamports,
+    meta: params.meta,
+    rpcUrl,
+    phase: "preview",
+    wallet: null,
+    meteoraConfigKey: null,
+    signatures: [],
+    createdAt: Date.now(),
+  });
+
+  return `http://localhost:${SIGNING_PORT}/scout/${id}`;
 }
 
 /**
