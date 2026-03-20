@@ -20,6 +20,8 @@
     "start:agent": "node dist/bin/bags-sdk-mcp.js --agent",
     "inspect": "npx @modelcontextprotocol/inspector node dist/bin/bags-sdk-mcp.js",
     "test": "vitest",
+    "setup": "node dist/bin/bags-sdk-mcp.js --setup",
+    "uninstall": "node dist/bin/bags-sdk-mcp.js --uninstall",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },

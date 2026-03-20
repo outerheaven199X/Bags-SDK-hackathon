@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Universal CLI entry point with flag parsing for stdio, HTTP, and agent modes. */
+/** Universal CLI entry point — flag dispatch, env loading, server startup. */
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -13,14 +13,56 @@ loadEnvFile(resolve(__dirname, "..", ".env"));
 const args = process.argv.slice(2);
 
 async function main(): Promise<void> {
-  if (args.includes("--help") || args.includes("-h")) {
-    printUsage();
+  // 1. Flags that never need env validation
+  if (args.includes("--help") || args.includes("-h")) { printUsage(); return; }
+  if (args.includes("--version") || args.includes("-v")) {
+    const { printVersion } = await import("../src/cli/version.js");
+    printVersion();
     return;
   }
 
+  // 2. Flags that handle their own env checking (no BAGS_API_KEY required)
+  if (args.includes("--setup")) {
+    const { runSetupWizard } = await import("../src/setup/wizard.js");
+    await runSetupWizard();
+    return;
+  }
+  if (args.includes("--uninstall")) {
+    const { runUninstallWizard } = await import("../src/setup/wizard.js");
+    await runUninstallWizard();
+    return;
+  }
+  if (args.includes("--clear-sessions")) {
+    const { clearSessions } = await import("../src/cli/sessions.js");
+    clearSessions();
+    return;
+  }
+  if (args.includes("--info")) {
+    const { printInfo } = await import("../src/cli/info.js");
+    printInfo();
+    return;
+  }
+  if (args.includes("--doctor")) {
+    const { runDoctor } = await import("../src/cli/doctor.js");
+    process.exit(await runDoctor());
+  }
+
+  // 3. Flags that need a valid BAGS_API_KEY
   validateEnv();
 
-  if (args.includes("--agent")) {
+  if (args.includes("--test-key")) {
+    const { runTestKey } = await import("../src/cli/whoami.js");
+    await runTestKey();
+    return;
+  }
+  if (args.includes("--whoami")) {
+    const { runWhoami } = await import("../src/cli/whoami.js");
+    await runWhoami();
+    return;
+  }
+
+  // 4. Agent mode
+  if (args.includes("--agent") || args.includes("--fee-optimize") || args.includes("--rebalance")) {
     const { startAgent } = await import("../src/agent/cli.js");
     const strategies: string[] = [];
     if (args.includes("--auto-claim")) strategies.push("auto-claim");
@@ -32,6 +74,7 @@ async function main(): Promise<void> {
     return;
   }
 
+  // 5. Server modes
   if (args.includes("--http")) {
     const { startHttp } = await import("../src/transport/http.js");
     const portFlag = args.find((a) => a.startsWith("--port="));
@@ -46,37 +89,45 @@ async function main(): Promise<void> {
 
 function printUsage(): void {
   console.log(`
-bags-sdk-mcp — Batteries-included MCP server for Bags.fm
+bags-sdk-mcp — MCP server for Bags.fm (46 tools)
 
-USAGE:
-  bags-sdk-mcp              Start stdio MCP server (default, for Claude Desktop)
-  bags-sdk-mcp --http       Start streamable HTTP MCP server
-  bags-sdk-mcp --http --port=8080   HTTP on custom port
-  bags-sdk-mcp --agent      Start autonomous agent mode
-  bags-sdk-mcp --agent --auto-claim   Agent with auto-claim strategy
-  bags-sdk-mcp --agent --monitor      Agent with launch monitor
-  bags-sdk-mcp --agent --scout        Agent with scout strategy
-  bags-sdk-mcp --agent --fee-optimize   One-shot fee config analysis
-  bags-sdk-mcp --agent --rebalance      One-shot portfolio rebalance advice
-  bags-sdk-mcp --agent --scout --auto-claim --monitor   All loop strategies
+SETUP
+  bags-sdk-mcp --setup               Interactive installer for Claude Desktop, Cursor, etc.
+  bags-sdk-mcp --uninstall            Remove from all detected MCP client configs
 
-OPTIONS:
-  --http            Use streamable HTTP transport instead of stdio
-  --port=PORT       HTTP port (default 3000)
-  --agent           Run in autonomous agent mode
-  --auto-claim      Enable auto-claim strategy (loop)
-  --monitor         Enable launch monitor strategy (loop)
-  --scout           Enable scout strategy (loop)
-  --fee-optimize    Analyze fee configs and suggest improvements (one-shot)
-  --rebalance       Analyze portfolio positions and suggest actions (one-shot)
-  -h, --help        Show this help message
+  Claude Code:  claude mcp add bags-sdk-mcp -e BAGS_API_KEY=xxx -- npx bags-sdk-mcp
 
-ENVIRONMENT:
-  BAGS_API_KEY          Required. Get one at dev.bags.fm
-  SOLANA_RPC_URL        Optional. Default: mainnet-beta
-  NOUS_API_KEY          Agent mode: Hermes 4 for fast decisions
-  ANTHROPIC_API_KEY     Agent mode: Sonnet for strategic decisions
-  AGENT_WALLET_PUBKEY   Required for --fee-optimize and --rebalance
+SERVER
+  bags-sdk-mcp                        Start stdio server (default, for MCP clients)
+  bags-sdk-mcp --http                 Start HTTP server on port 3000
+  bags-sdk-mcp --http --port=8080     HTTP on custom port
+
+AGENT
+  bags-sdk-mcp --agent --auto-claim   Claim fees above threshold every 5 min
+  bags-sdk-mcp --agent --monitor      Watch launches, flag interesting ones
+  bags-sdk-mcp --agent --scout        Scan trends, propose token launches
+  bags-sdk-mcp --agent --scout --auto-claim --monitor   All strategies
+
+TOOLS
+  bags-sdk-mcp --fee-optimize         Analyze fee configs, suggest improvements
+  bags-sdk-mcp --rebalance            Analyze positions, recommend claim strategy
+
+DIAGNOSTICS
+  bags-sdk-mcp --doctor               Check everything: env, API, RPC, configs, ports
+  bags-sdk-mcp --info                 Show current config and capabilities (no network)
+  bags-sdk-mcp --whoami               Test API key and show wallet stats
+  bags-sdk-mcp --test-key             Validate API key only
+  bags-sdk-mcp --version, -v          Print version
+  bags-sdk-mcp --clear-sessions       Wipe expired signing sessions
+
+ENVIRONMENT
+  BAGS_API_KEY        Required. Get one at dev.bags.fm
+  SOLANA_RPC_URL      Optional. Default: mainnet-beta
+  NOUS_API_KEY        Agent mode: Hermes for fast decisions
+  ANTHROPIC_API_KEY   Agent mode: Sonnet for strategy
+  AGENT_WALLET_PUBKEY Agent mode: wallet to operate on
+  FAL_API_KEY         Scout mode: fal.ai image generation
+  REPLICATE_API_KEY   Scout mode: Replicate image generation
 `.trim());
 }
 
@@ -107,11 +158,13 @@ function validateEnv(): void {
       "[bags-sdk-mcp] BAGS_API_KEY is missing.\n" +
       "\n" +
       "  Set it in one of these ways:\n" +
-      "    1. Create a .env file with BAGS_API_KEY=your-key\n" +
-      "    2. Pass it via your MCP client config env block\n" +
-      "    3. Export it: export BAGS_API_KEY=your-key\n" +
+      "    1. Run: npx bags-sdk-mcp --setup\n" +
+      "    2. Create a .env file with BAGS_API_KEY=your-key\n" +
+      "    3. Pass it via your MCP client config env block\n" +
+      "    4. Export it: export BAGS_API_KEY=your-key\n" +
       "\n" +
-      "  Get a key at https://dev.bags.fm\n",
+      "  Get a key at https://dev.bags.fm\n" +
+      "  Diagnose issues: npx bags-sdk-mcp --doctor\n",
     );
     process.exit(1);
   }

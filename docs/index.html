@@ -407,7 +407,7 @@ td code { font-size: 12px; white-space: nowrap; }
   <h3>Your First 5 Minutes</h3>
   <ol>
     <li>Get your API key from <a href="https://dev.bags.fm" target="_blank">dev.bags.fm</a></li>
-    <li>Add the MCP config to your client (see <a href="#" onclick="showSection('configuration');return false">Configuration</a>)</li>
+    <li>Run <code>npx bags-sdk-mcp --setup</code> (or see <a href="#" onclick="showSection('installation');return false">Installation</a> for other options)</li>
     <li>Restart your client</li>
     <li>Type: <em>"What's trending on Bags?"</em></li>
     <li>The AI calls <code>bags_top_tokens</code> and <code>bags_launch_feed</code> &mdash; you see live data from the Bags.fm ecosystem</li>
@@ -432,16 +432,26 @@ td code { font-size: 12px; white-space: nowrap; }
 <div class="section" id="installation">
   <h2>Installation</h2>
 
-  <h3>From npm (recommended)</h3>
-  <p>No install needed &mdash; <code>npx</code> runs it directly from the MCP config:</p>
-  <pre><span class="lang-label">bash</span><code>npx bags-sdk-mcp</code></pre>
+  <h3>One command</h3>
+  <pre><span class="lang-label">bash</span><code>npx bags-sdk-mcp --setup</code></pre>
+  <p>Get your API key at <a href="https://dev.bags.fm" target="_blank">dev.bags.fm</a>. The wizard detects your MCP clients, asks for your key, and writes the config. Restart your client and you're live.</p>
 
-  <h3>From source</h3>
-  <pre><span class="lang-label">bash</span><code>git clone https://github.com/outerheaven199X/Bags-SDK-hackathon.git
+  <details>
+    <summary>Claude Code alternative</summary>
+    <pre><span class="lang-label">bash</span><code>claude mcp add bags-sdk-mcp -e BAGS_API_KEY=your-key -- npx bags-sdk-mcp</code></pre>
+  </details>
+
+  <h3>Uninstall</h3>
+  <pre><span class="lang-label">bash</span><code>npx bags-sdk-mcp --uninstall</code></pre>
+
+  <details>
+    <summary>From source</summary>
+    <pre><span class="lang-label">bash</span><code>git clone https://github.com/outerheaven199X/Bags-SDK-hackathon.git
 cd Bags-SDK-hackathon
 cp .env.example .env   # add your BAGS_API_KEY
 npm install && npm run build
 npm start</code></pre>
+  </details>
 
   <h3>Verify</h3>
   <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --help</code></pre>
@@ -450,35 +460,43 @@ npm start</code></pre>
 <!-- ═══════════════════ CONFIGURATION ═══════════════════ -->
 <div class="section" id="configuration">
   <h2>Configuration</h2>
-  <p>Add this block to your MCP client's config file:</p>
 
-  <pre><span class="lang-label">JSON</span><code>{
+  <p>The recommended way is to run <code>npx bags-sdk-mcp --setup</code> &mdash; it handles everything below automatically.</p>
+
+  <details>
+    <summary>Manual configuration (if the wizard doesn't work)</summary>
+
+    <p>Add this block to your MCP client's config file:</p>
+
+    <pre><span class="lang-label">JSON</span><code>{
   "mcpServers": {
     "bags-sdk-mcp": {
       "command": "npx",
       "args": ["bags-sdk-mcp"],
       "env": {
-        "BAGS_API_KEY": "your-key-here",
-        "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com"
+        "BAGS_API_KEY": "your-key-here"
       }
     }
   }
 }</code></pre>
 
-  <h3>Config file locations</h3>
-  <table>
-    <thead><tr><th>Client</th><th>Path</th></tr></thead>
-    <tbody>
-      <tr><td>Claude Desktop (Windows)</td><td><code>%APPDATA%/Claude/claude_desktop_config.json</code></td></tr>
-      <tr><td>Claude Desktop (Mac)</td><td><code>~/Library/Application Support/Claude/claude_desktop_config.json</code></td></tr>
-      <tr><td>Cursor</td><td><code>.cursor/mcp.json</code> in project root</td></tr>
-      <tr><td>Claude Code</td><td><code>.mcp.json</code> in project root</td></tr>
-    </tbody>
-  </table>
+    <h3>Config file locations</h3>
+    <table>
+      <thead><tr><th>Client</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Desktop (macOS)</td><td><code>~/Library/Application Support/Claude/claude_desktop_config.json</code></td></tr>
+        <tr><td>Claude Desktop (Windows)</td><td><code>%APPDATA%/Claude/claude_desktop_config.json</code></td></tr>
+        <tr><td>Cursor</td><td><code>.cursor/mcp.json</code> in project root</td></tr>
+        <tr><td>Claude Code</td><td><code>.mcp.json</code> in project root</td></tr>
+      </tbody>
+    </table>
+
+    <p>Restart your client after saving.</p>
+  </details>
 
   <div class="callout callout-tip">
     <span class="callout-icon">&#128161;</span>
-    <span>After saving the config, restart your client. The 46 tools, 4 resources, and 6 prompts appear automatically.</span>
+    <span>After setup, restart your client. The 46 tools, 4 resources, and 6 prompts appear automatically.</span>
   </div>
 </div>
 
@@ -1343,14 +1361,49 @@ bags-sdk-mcp --http --port=8080  # Custom port</code></pre>
 <!-- ═══════════════════ CLI REFERENCE ═══════════════════ -->
 <div class="section" id="cli-reference">
   <h2>CLI Reference</h2>
-  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp                                  # stdio (default)
-bags-sdk-mcp --http                           # HTTP on port 3000
-bags-sdk-mcp --http --port=8080               # Custom port
-bags-sdk-mcp --agent --auto-claim             # Auto-claim strategy
-bags-sdk-mcp --agent --monitor                # Launch monitor
-bags-sdk-mcp --agent --scout                  # Scout strategy
-bags-sdk-mcp --agent --scout --auto-claim --monitor   # All strategies
-bags-sdk-mcp --help                           # Print usage</code></pre>
+
+  <h3>Setup</h3>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --setup               # Interactive installer for Claude Desktop, Cursor, etc.
+bags-sdk-mcp --uninstall            # Remove from all detected MCP client configs
+
+# Claude Code (one command):
+claude mcp add bags-sdk-mcp -e BAGS_API_KEY=xxx -- npx bags-sdk-mcp</code></pre>
+
+  <h3>Server</h3>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp                        # Start stdio server (default)
+bags-sdk-mcp --http                 # Start HTTP server on port 3000
+bags-sdk-mcp --http --port=8080     # HTTP on custom port</code></pre>
+
+  <h3>Agent</h3>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --agent --auto-claim   # Claim fees above threshold every 5 min
+bags-sdk-mcp --agent --monitor      # Watch launches, flag interesting ones
+bags-sdk-mcp --agent --scout        # Scan trends, propose token launches
+bags-sdk-mcp --agent --scout --auto-claim --monitor   # All strategies</code></pre>
+
+  <h3>One-Shot Tools</h3>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --fee-optimize         # Analyze fee configs, suggest improvements
+bags-sdk-mcp --rebalance            # Analyze positions, recommend claim strategy</code></pre>
+
+  <h3>Diagnostics</h3>
+  <pre><span class="lang-label">bash</span><code>bags-sdk-mcp --doctor               # Check everything: env, API, RPC, configs, ports
+bags-sdk-mcp --info                 # Show current config and capabilities (no network)
+bags-sdk-mcp --whoami               # Test API key and show wallet stats
+bags-sdk-mcp --test-key             # Validate API key only
+bags-sdk-mcp --version              # Print version
+bags-sdk-mcp --clear-sessions       # Wipe expired signing sessions</code></pre>
+
+  <h3>Troubleshooting</h3>
+  <p>If something isn't working, start with <code>--doctor</code>. It checks your env vars, API key, RPC connectivity, MCP client configs, signing port, and sessions &mdash; then tells you exactly what's wrong.</p>
+  <table>
+    <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>BAGS_API_KEY is missing</td><td>Run <code>npx bags-sdk-mcp --setup</code> or set the key in your MCP config</td></tr>
+      <tr><td>Key validation fails</td><td>Get a new key at <a href="https://dev.bags.fm">dev.bags.fm</a>, then <code>npx bags-sdk-mcp --test-key</code></td></tr>
+      <tr><td>Signing page won't load</td><td>Port 3141 may be in use &mdash; <code>--doctor</code> will check</td></tr>
+      <tr><td>Stale signing sessions</td><td>Run <code>npx bags-sdk-mcp --clear-sessions</code></td></tr>
+      <tr><td>Agent mode crashes</td><td>Check NOUS_API_KEY and ANTHROPIC_API_KEY &mdash; <code>--doctor</code> flags these</td></tr>
+    </tbody>
+  </table>
 
   <h3>Technology Stack</h3>
   <table>
