@@ -8,7 +8,7 @@ const DEV_PORTAL_URL = "https://dev.bags.fm";
 const SERVER_LABEL = "bags-sdk-mcp";
 const TOOL_COUNT = 46;
 const RESOURCE_COUNT = 4;
-const PROMPT_COUNT = 6;
+const PROMPT_COUNT = 8;
 
 /**
  * Run the interactive setup wizard.

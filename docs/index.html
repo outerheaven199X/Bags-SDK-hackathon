@@ -315,7 +315,7 @@ td code { font-size: 12px; white-space: nowrap; }
   <div class="sidebar-section">
     <div class="sidebar-heading">Resources &amp; Prompts</div>
     <a class="sidebar-link" data-section="resources">Resources (4)</a>
-    <a class="sidebar-link" data-section="prompts">Prompts (6)</a>
+    <a class="sidebar-link" data-section="prompts">Prompts (8)</a>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-heading">Guides</div>
@@ -351,7 +351,7 @@ td code { font-size: 12px; white-space: nowrap; }
   <div class="badges">
     <span class="badge">46 Tools</span>
     <span class="badge">4 Resources</span>
-    <span class="badge">6 Prompts</span>
+    <span class="badge">8 Prompts</span>
     <a href="https://www.npmjs.com/package/bags-sdk-mcp" class="badge">npm bags-sdk-mcp</a>
     <a href="https://dev.bags.fm" class="badge">API Key @ dev.bags.fm</a>
   </div>
@@ -496,7 +496,7 @@ npm start</code></pre>
 
   <div class="callout callout-tip">
     <span class="callout-icon">&#128161;</span>
-    <span>After setup, restart your client. The 46 tools, 4 resources, and 6 prompts appear automatically.</span>
+    <span>After setup, restart your client. The 46 tools, 4 resources, and 8 prompts appear automatically.</span>
   </div>
 </div>
 
@@ -569,7 +569,7 @@ npm start</code></pre>
 │   │   ├── signing/          # open-signing-page, open-launch-page
 │   │   └── _registry.ts      # Imports and registers all 46 tools
 │   ├── resources/            # 4 MCP resources
-│   ├── prompts/              # 6 MCP prompts
+│   ├── prompts/              # 8 MCP prompts
 │   ├── composer/             # Fee Config Builder + templates + validator
 │   ├── agent/                # Autonomous agent mode
 │   └── utils/                # Constants, errors, formatting
@@ -992,7 +992,7 @@ npm start</code></pre>
   </div>
   <div class="tool-card">
     <h4>bags_generate_token_image</h4>
-    <p class="desc">Generate a token logo image from a text prompt using fal.ai (Flux Schnell) or Replicate. Returns a public image URL ready for use in token launches. Works as a standalone tool outside of scout mode.</p>
+    <p class="desc">Generate a token logo image from a text prompt using fal.ai (Nano Banana Pro) or Replicate (Nano Banana 2). Returns a public image URL ready for use in token launches. Works as a standalone tool outside of scout mode.</p>
     <p class="meta">Inputs: <code>prompt</code> (string), <code>provider</code> ("fal" | "replicate", optional)</p>
     <p class="meta">Returns: image URL and provider used</p>
     <p class="meta">Annotations: <code>openWorldHint: true</code></p>
@@ -1049,6 +1049,16 @@ npm start</code></pre>
     <h4>bags_portfolio_overview</h4>
     <p class="desc">Full portfolio summary &mdash; balances, holdings, fees, stats.</p>
     <p class="meta">Flow (parallel): wallet_balance + token_holdings + claimable_positions + claim_stats</p>
+  </div>
+  <div class="tool-card">
+    <h4>bags_getting_started</h4>
+    <p class="desc">Interactive onboarding for new users. Shows available capabilities and guides them to a starting point.</p>
+    <p class="meta">Flow: presents menu of actions &rarr; guides through chosen workflow step by step</p>
+  </div>
+  <div class="tool-card">
+    <h4>bags_create_custom_tool</h4>
+    <p class="desc">Scaffold a new MCP tool from a plain-English description. Generates TypeScript tool files using Bags SDK services.</p>
+    <p class="meta">Flow: accepts description &rarr; generates complete tool file with registration instructions</p>
   </div>
 </div>
 
@@ -1267,7 +1277,7 @@ npm start</code></pre>
     <thead><tr><th>Env Variable</th><th>Default</th><th>Description</th></tr></thead>
     <tbody>
       <tr><td><code>IMAGE_GEN_PROVIDER</code></td><td><code>fal</code></td><td>Image provider: <code>fal</code> or <code>replicate</code></td></tr>
-      <tr><td><code>FAL_API_KEY</code></td><td>&mdash;</td><td>fal.ai API key (uses Flux Schnell for fast icon generation)</td></tr>
+      <tr><td><code>FAL_API_KEY</code></td><td>&mdash;</td><td>fal.ai API key (uses Nano Banana Pro for token logo generation)</td></tr>
       <tr><td><code>REPLICATE_API_KEY</code></td><td>&mdash;</td><td>Replicate API key (alternative to fal.ai)</td></tr>
       <tr><td><code>SCOUT_INTERVAL</code></td><td><code>1800</code></td><td>Seconds between scan cycles (set to 60 for testing)</td></tr>
       <tr><td><code>SCOUT_SOURCES</code></td><td><code>bags,news</code></td><td>Comma-separated: <code>bags</code>, <code>news</code></td></tr>

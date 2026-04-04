@@ -2,7 +2,7 @@
 
 const FAL_API_BASE = "https://fal.run/fal-ai/nano-banana-pro";
 const REPLICATE_API_BASE = "https://api.replicate.com/v1/predictions";
-const REPLICATE_DEFAULT_MODEL = "google/gemini-flash-1.5";
+const REPLICATE_DEFAULT_MODEL = "google/nano-banana-2";
 const REPLICATE_POLL_INTERVAL_MS = 2_000;
 const REPLICATE_MAX_POLLS = 30;
 

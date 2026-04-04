@@ -6,7 +6,7 @@ import { bagsGet } from "../client/bags-rest.js";
 import { cache, CACHE_TTL } from "../client/cache.js";
 
 const CACHE_KEY = "resource:launch-feed";
-const DEFAULT_API_BASE = "https://public-api-v2.bags.fm/api/v1";
+
 
 /**
  * Register the bags://launches resource on the given MCP server.

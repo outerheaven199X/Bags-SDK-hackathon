@@ -28,7 +28,12 @@ export function getBagsSDK(): BagsSDK {
  * Get the shared Solana RPC connection (same one used by BagsSDK).
  * @returns Solana Connection instance.
  */
+let connection: Connection | null = null;
+
 export function getConnection(): Connection {
-  const rpcUrl = process.env.SOLANA_RPC_URL || DEFAULT_RPC_URL;
-  return new Connection(rpcUrl);
+  if (!connection) {
+    const rpcUrl = process.env.SOLANA_RPC_URL || DEFAULT_RPC_URL;
+    connection = new Connection(rpcUrl);
+  }
+  return connection;
 }

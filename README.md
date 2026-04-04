@@ -229,6 +229,14 @@ Loaded from `.env` automatically.
 
 ---
 
+## Known Issues
+
+### npm audit vulnerabilities
+
+Running `npm audit` reports vulnerabilities in transitive dependencies from `@meteora-ag/cp-amm-sdk` (Meteora's AMM SDK), which incorrectly ships test frameworks (`mocha`, `chai`) as production dependencies. These packages are never imported or executed by bags-sdk-mcp. We've reported this upstream.
+
+---
+
 ## Development
 
 ```bash
