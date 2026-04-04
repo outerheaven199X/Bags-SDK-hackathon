@@ -7,7 +7,6 @@ import { cache, CACHE_TTL } from "../client/cache.js";
 
 const CACHE_KEY = "resource:launch-feed";
 
-
 /**
  * Register the bags://launches resource on the given MCP server.
  * @param server - The McpServer instance to register on.
